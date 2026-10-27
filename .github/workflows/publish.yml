@@ -1,0 +1,59 @@
+name: Publish to GitHub Packages
+
+on:
+  push:
+    branches: [ "ver/**" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # Only publish version branches from this repository, including manual runs.
+    if: ${{ github.repository == 'btx-systems/Folia' && startsWith(github.ref, 'refs/heads/ver/') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - name: Checkout Git Repository
+        uses: actions/checkout@v7
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Configure Git User Details
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+
+      - name: Apply Patches
+        run: ./gradlew applyAllPatches --stacktrace
+
+      - name: Build and Verify Publications
+        run: ./gradlew build :folia-server:generateDevelopmentBundle --stacktrace
+
+      - name: Publish to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew -PpublishDevBundle publishAllPublicationsToGitHubPackagesRepository --stacktrace
+
+      - name: Link Published Packages
+        run: |
+          version=$(./gradlew --quiet printPaperVersion)
+          echo '### Published Folia libraries' >> "$GITHUB_STEP_SUMMARY"
+          echo '[Browse packages](https://github.com/btx-systems/Folia/packages) or resolve them from `https://maven.pkg.github.com/btx-systems/folia`.' >> "$GITHUB_STEP_SUMMARY"
+          echo "API: \`dev.folia:folia-api:$version\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Development bundle: \`dev.folia:dev-bundle:$version\`" >> "$GITHUB_STEP_SUMMARY"

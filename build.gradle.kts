@@ -93,6 +93,13 @@ subprojects {
 
     extensions.configure<PublishingExtension> {
         repositories {
+            maven("https://maven.pkg.github.com/btx-systems/folia") {
+                name = "GitHubPackages"
+                credentials {
+                    username = providers.environmentVariable("GITHUB_ACTOR").orNull
+                    password = providers.environmentVariable("GITHUB_TOKEN").orNull
+                }
+            }
             maven("https://artifactory.papermc.io/artifactory/releases/") {
                 name = "paperReleases"
                 credentials(PasswordCredentials::class)
@@ -108,7 +115,8 @@ tasks.register("printMinecraftVersion") {
 }
 
 tasks.register("printPaperVersion") {
+    val publicationVersion = project.version.toString()
     doLast {
-        println(project.version)
+        println(publicationVersion)
     }
 }

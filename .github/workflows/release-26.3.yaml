@@ -15,8 +15,8 @@ concurrency:
 
 jobs:
   release:
-    # guard for manual dispatch
-    if: ${{ github.ref == 'refs/heads/ver/26.3.x' }}
+    # The upstream release uses PaperMC's private runner and publishing credentials.
+    if: ${{ github.repository == 'PaperMC/Folia' && github.ref == 'refs/heads/ver/26.3.x' }}
     runs-on: namespace-profile-linux-default
     timeout-minutes: 30
     #env:

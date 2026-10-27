@@ -10,6 +10,51 @@
     <p>Fork of <a href="https://github.com/PaperMC/Paper">Paper</a> which adds regionised multithreading to the dedicated server.</p>
 </div>
 
+## Fork builds and packages
+
+The [Patch and Build workflow](https://github.com/btx-systems/Folia/actions/workflows/build.yml)
+runs on pushes and pull requests and can also be started manually. Open a successful run
+and download `folia-paperclip-<run number>` from **Artifacts** (or use the download link
+in the run summary). Artifacts are retained for 30 days and require a GitHub sign-in.
+Extract the archive and run the Paperclip jar with Java 25:
+
+```sh
+java -jar folia-paperclip-<version>.jar --nogui
+```
+
+On the first start, follow the server's EULA instructions before restarting.
+
+The [Publish to GitHub Packages workflow](https://github.com/btx-systems/Folia/actions/workflows/publish.yml)
+publishes `dev.folia:folia-api` (including sources and Javadocs) and `dev.folia:dev-bundle`
+on pushes to `ver/**`, or when manually dispatched on a version branch. Published versions
+use `<mcVersion>.build.<run number>-<channel>`, for example `26.3.build.42-alpha`.
+Find the versions under the repository's [Packages](https://github.com/btx-systems/Folia/packages).
+
+To consume the fork's API with Gradle Kotlin DSL:
+
+```kotlin
+repositories {
+    maven("https://maven.pkg.github.com/btx-systems/folia") {
+        credentials {
+            username = providers.environmentVariable("GITHUB_ACTOR").orNull
+            password = providers.environmentVariable("GITHUB_TOKEN").orNull
+        }
+    }
+    maven("https://repo.papermc.io/repository/maven-public/")
+    mavenCentral()
+}
+
+dependencies {
+    compileOnly("dev.folia:folia-api:26.3.build.42-alpha") // Replace with a published version.
+}
+```
+
+For local downloads, set `GITHUB_ACTOR` to your GitHub username and `GITHUB_TOKEN` to a
+personal access token (classic) with `read:packages`. GitHub Packages requires authentication
+even for public Maven packages; see [GitHub's Gradle registry documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-gradle-registry).
+Publishing in this repository uses the workflow's automatic `GITHUB_TOKEN` with
+`packages: write`; no separate publishing secret is needed.
+
 ## Overview
 
 Folia groups nearby loaded chunks to form an "independent region."
