@@ -18,10 +18,7 @@ import org.bukkit.HeightMap;
 public record ChunkExtras(List<BinaryData> blockEntities, Map<HeightMap, List<Integer>> heightmaps) {
     
     /**
-     * Logical ChunkExtras contract.
-     *
-     * @param of of value
-     * @param of of value
+     * No supplied block entities or heightmaps.
      */
     public static final ChunkExtras EMPTY = new ChunkExtras(List.of(), Map.of());
 

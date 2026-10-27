@@ -13,22 +13,22 @@ import java.util.UUID;
 public record PlayerRecordKey(UUID playerId, Kind kind) {
 
     /**
-     * Logical Kind contract.
+     * Independently persisted records belonging to one player.
      */
     public enum Kind {
 
         /**
-         * player data category.
+         * Player NBT, including inventory, position and persistent data.
          */
         PLAYER_DATA,
 
         /**
-         * statistics category.
+         * Player statistics as UTF-8 JSON.
          */
         STATISTICS,
 
         /**
-         * advancements category.
+         * Player advancement progress as UTF-8 JSON.
          */
         ADVANCEMENTS
     }

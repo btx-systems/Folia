@@ -40,6 +40,11 @@ public final class GenerationFastPathBenchmark {
         allocations.setThreadAllocatedMemoryEnabled(true);
         int warmups = Integer.getInteger("benchmark.warmups", 5);
         int samples = Integer.getInteger("benchmark.samples", 9);
+        // Warm the shared decoder/counting paths before measuring small fixtures.
+        List<Fixture> hot = java.util.Collections.nCopies(128, fixture(STATES));
+        for (int i = 0; i < Integer.getInteger("benchmark.prewarm", 100); ++i) {
+            for (String path : List.of("bukkit-setBlock", "packed-copy", "packed-owned", "encoded-sections")) blackhole = run(path, hot, path.equals("packed-owned") ? hot.stream().map(f -> f.words.clone()).toArray(long[][]::new) : null);
+        }
         System.out.println("IMPORT_BENCHMARK java=" + System.getProperty("java.version") + " arch=" + System.getProperty("os.arch")
             + " warmups=" + warmups + " samples=" + samples);
         System.out.println("BENCH_CSV,sections,profile,path,median_ms,p95_ms,median_alloc_bytes,checksum");
@@ -50,7 +55,7 @@ public final class GenerationFastPathBenchmark {
                 fixtures.add(fixture(mixed ? STATES : List.of(y % 4 == 3 ? STATES.getFirst() : STATES.get(1))));
             }
             List<String> paths = List.of("bukkit-setBlock", "packed-copy", "packed-owned", "encoded-sections");
-            for (int i = 0; i < warmups; ++i) for (String path : paths) run(path, fixtures, null);
+            for (int i = 0; i < warmups; ++i) for (String path : paths) run(path, fixtures, path.equals("packed-owned") ? fixtures.stream().map(f -> f.words.clone()).toArray(long[][]::new) : null);
             long[][] times = new long[4][samples];
             long[][] bytes = new long[4][samples];
             long[] checksums = new long[4];

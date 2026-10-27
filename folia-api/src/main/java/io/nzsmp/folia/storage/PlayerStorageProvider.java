@@ -4,7 +4,7 @@ import java.util.concurrent.CompletionStage;
 
 
 /**
- * Logical PlayerStorageProvider contract.
+ * Opens player storage for a configured namespace independent of dimensions.
  */
 @FunctionalInterface
 public interface PlayerStorageProvider {
@@ -12,8 +12,8 @@ public interface PlayerStorageProvider {
     /**
      * Opens a server-owned storage session.
      *
-     * @param context context value
-     * @return the operation result
+     * @param context logical player namespace
+     * @return a stage supplying the opened store
      */
     CompletionStage<PlayerStore> open(PlayerStorageContext context);
 }

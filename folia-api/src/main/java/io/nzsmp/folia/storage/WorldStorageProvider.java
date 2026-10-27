@@ -4,7 +4,7 @@ import java.util.concurrent.CompletionStage;
 
 
 /**
- * Logical WorldStorageProvider contract.
+ * Opens independent root-metadata and dimension storage sessions for a logical world.
  */
 @FunctionalInterface
 public interface WorldStorageProvider {
@@ -12,8 +12,8 @@ public interface WorldStorageProvider {
     /**
      * Opens a server-owned storage session.
      *
-     * @param context context value
-     * @return the operation result
+     * @param context logical world identity and optional dimension
+     * @return a stage supplying the opened store
      */
     CompletionStage<WorldStore> open(WorldStorageContext context);
 }

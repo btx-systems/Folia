@@ -11,28 +11,28 @@ import net.kyori.adventure.key.Key;
 public sealed interface WorldRecordKey permits WorldRecordKey.Chunk, WorldRecordKey.SavedData, WorldRecordKey.Metadata, WorldRecordKey.Asset {
 
     /**
-     * Logical ChunkKind contract.
+     * Separately persisted categories at the same chunk coordinates.
      */
     enum ChunkKind {
 
         /**
-         * terrain category.
+         * Terrain, block entities, ticks and chunk metadata as canonical chunk NBT.
          */
         TERRAIN,
 
         /**
-         * entities category.
+         * Entity chunk NBT, including non-player entities.
          */
         ENTITIES,
 
         /**
-         * poi category.
+         * Point-of-interest section NBT.
          */
         POI
     }
 
     /**
-     * Logical Chunk contract.
+     * One dimension record at chunk coordinates.
      *
      * @param kind   record category
      * @param chunkX chunk X coordinate
@@ -53,7 +53,7 @@ public sealed interface WorldRecordKey permits WorldRecordKey.Chunk, WorldRecord
     }
 
     /**
-     * Logical SavedData contract.
+     * Namespaced saved world data, such as maps and other server saved-data types.
      *
      * @param id logical resource key
      */
@@ -70,7 +70,7 @@ public sealed interface WorldRecordKey permits WorldRecordKey.Chunk, WorldRecord
     }
 
     /**
-     * Logical Metadata contract.
+     * World metadata addressed by its normalized logical name.
      *
      * @param name normalized metadata name
      */
@@ -87,7 +87,7 @@ public sealed interface WorldRecordKey permits WorldRecordKey.Chunk, WorldRecord
     }
 
     /**
-     * Logical Asset contract.
+     * A server-managed world asset materialized in the disposable world cache.
      *
      * @param relativePath normalized relative asset path
      */
