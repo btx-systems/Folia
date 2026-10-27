@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: btx-systems <jappleid441@gmail.com>
+Date: Tue, 27 Oct 2026 13:32:00 +1300
+Subject: [PATCH] Add bootstrap persistence provider registry API
+
+
+diff --git a/src/main/java/io/papermc/paper/plugin/bootstrap/BootstrapContext.java b/src/main/java/io/papermc/paper/plugin/bootstrap/BootstrapContext.java
+index 577a9d5aeae55a3b8452b6d873b51b30384c1fea..553da01ea5b15c9013305a273efd62259887e062 100644
+--- a/src/main/java/io/papermc/paper/plugin/bootstrap/BootstrapContext.java
++++ b/src/main/java/io/papermc/paper/plugin/bootstrap/BootstrapContext.java
+@@ -23,4 +23,12 @@ public interface BootstrapContext extends PluginProviderContext, LifecycleEventO
+      * @return the lifecycle event manager
+      */
+     LifecycleEventManager<BootstrapContext> getLifecycleManager();
++
++    /**
++     * Registers persistence providers before world metadata is read.
++     * Configuration explicitly selects a provider; registration alone changes no storage.
++     *
++     * @return the bootstrap-only persistence registry
++     */
++    io.nzsmp.folia.storage.PersistenceRegistry getPersistenceRegistry();
+ }
