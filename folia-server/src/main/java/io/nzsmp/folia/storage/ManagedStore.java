@@ -22,6 +22,7 @@ public final class ManagedStore<K> implements RecordStore<K> {
     private final Executor executor;
     private final long timeoutMillis;
     private final long byteLimit;
+    private final int operationLimit;
     private final Consumer<Throwable> fatal;
     private long pendingBytes;
     private int pendingOperations;
@@ -35,6 +36,7 @@ public final class ManagedStore<K> implements RecordStore<K> {
         this.timeoutMillis = timeout.toMillis();
         if (this.timeoutMillis < 1 || byteLimit < 1) throw new IllegalArgumentException("Invalid storage limits");
         this.byteLimit = byteLimit;
+        this.operationLimit = Math.addExact(concurrency, queued);
         this.fatal = fatal;
         this.queue = new AsyncWorkQueue(concurrency, queued, executor);
     }
@@ -45,7 +47,7 @@ public final class ManagedStore<K> implements RecordStore<K> {
         synchronized (this) {
             if (this.closing) return CompletableFuture.failedFuture(new IllegalStateException("Store is closing"));
             if (this.failed != null) return CompletableFuture.failedFuture(this.failed);
-            if (this.pendingOperations >= 4096) {
+            if (this.pendingOperations >= this.operationLimit) {
                 final IllegalStateException error = new IllegalStateException("Too many pending storage keys");
                 this.fail(error);
                 return CompletableFuture.failedFuture(error);
@@ -72,7 +74,7 @@ public final class ManagedStore<K> implements RecordStore<K> {
         synchronized (this) {
             if (this.closing) return CompletableFuture.failedFuture(new IllegalStateException("Store is closing"));
             if (this.failed != null) return CompletableFuture.failedFuture(this.failed);
-            if (this.pendingOperations + unique.size() > 4096) {
+            if (this.pendingOperations + unique.size() > this.operationLimit) {
                 final IllegalStateException error = new IllegalStateException("Too many pending storage operations");
                 this.fail(error);
                 return CompletableFuture.failedFuture(error);

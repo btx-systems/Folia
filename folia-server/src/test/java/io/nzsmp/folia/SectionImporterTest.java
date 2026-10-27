@@ -65,6 +65,38 @@ class SectionImporterTest {
     }
 
     @Test
+    void malformedSerializedPalettesCannotBePromotedToAirForPluginRecords() {
+        var factory = PalettedContainerFactory.create(RegistryHelper.registryAccess());
+        var invalidState = new net.minecraft.nbt.CompoundTag();
+        invalidState.putString("Name", "minecraft:stone"); // obsolete shape falsely labelled as current-version data
+        var palette = new net.minecraft.nbt.ListTag(); palette.add(invalidState);
+        var container = new net.minecraft.nbt.CompoundTag(); container.put("palette", palette);
+        var parsed = factory.blockStatesContainerCodec().parse(net.minecraft.nbt.NbtOps.INSTANCE, container);
+        assertTrue(parsed.error().isPresent());
+        assertThrows(net.minecraft.world.level.chunk.storage.SerializableChunkData.ChunkReadException.class, () ->
+            net.minecraft.world.level.chunk.storage.SerializableChunkData.resolvePaletteResult(parsed, new net.minecraft.world.level.ChunkPos(0, 0), -4, true));
+    }
+
+    @Test
+    void importedBlockEntitiesRequireMatchingPositionsAndTypes() {
+        var factory = PalettedContainerFactory.create(RegistryHelper.registryAccess());
+        var chunk = new net.minecraft.world.level.chunk.ProtoChunk(new net.minecraft.world.level.ChunkPos(-2, 3), net.minecraft.world.level.chunk.UpgradeData.EMPTY,
+            net.minecraft.world.level.LevelHeightAccessor.create(-64, 384), factory, null);
+        chunk.getSections()[0].setBlockState(1, 0, 1, Blocks.CHEST.defaultBlockState());
+        var tag = new net.minecraft.nbt.CompoundTag();
+        tag.putInt("x", -31); tag.putInt("y", -64); tag.putInt("z", 49); tag.putString("id", "minecraft:chest");
+        var seen = new java.util.HashSet<net.minecraft.core.BlockPos>();
+        io.nzsmp.folia.generation.ChunkImporter.validateBlockEntity(chunk, tag, seen);
+        assertThrows(IllegalArgumentException.class, () -> io.nzsmp.folia.generation.ChunkImporter.validateBlockEntity(chunk, tag, seen));
+        tag.putString("id", "minecraft:furnace");
+        assertThrows(IllegalArgumentException.class, () -> io.nzsmp.folia.generation.ChunkImporter.validateBlockEntity(chunk, tag, new java.util.HashSet<>()));
+        tag.putString("id", "DUMMY");
+        io.nzsmp.folia.generation.ChunkImporter.validateBlockEntity(chunk, tag, new java.util.HashSet<>());
+        tag.putInt("x", 0);
+        assertThrows(IllegalArgumentException.class, () -> io.nzsmp.folia.generation.ChunkImporter.validateBlockEntity(chunk, tag, new java.util.HashSet<>()));
+    }
+
+    @Test
     void registryDescriptorsAreStableAndExposeNumericMappings() {
         var biomes = RegistryHelper.registryAccess().lookupOrThrow(Registries.BIOME);
         var first = RegistryLayouts.create(biomes);

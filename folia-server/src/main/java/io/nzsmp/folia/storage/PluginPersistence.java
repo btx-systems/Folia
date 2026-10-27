@@ -49,6 +49,10 @@ public final class PluginPersistence implements PersistenceRegistry {
     private volatile WorldStorageProvider worldProvider;
     private volatile Path root;
     private String worldId;
+    private static Duration operationTimeout = Duration.ofSeconds(10);
+    private static int concurrency = 64;
+    private static int queueCapacity = 4096;
+    private static long byteLimit = 256L * 1024 * 1024;
     private final Map<String, Key> dimensions = new ConcurrentHashMap<>();
     private final Map<String, String> assetStamps = new ConcurrentHashMap<>();
     private volatile boolean frozen;
@@ -71,10 +75,22 @@ public final class PluginPersistence implements PersistenceRegistry {
         self.frozen = true;
         self.root = worldRoot.toAbsolutePath().normalize();
         final Path configFile = Path.of("config", "plugin-storage.yml");
-        final YamlConfiguration config = Files.exists(configFile) ? YamlConfiguration.loadConfiguration(configFile.toFile()) : new YamlConfiguration();
+        final YamlConfiguration config = loadConfiguration(configFile);
+        operationTimeout = Duration.ofSeconds(config.getLong("limits.timeout-seconds", 10));
+        concurrency = config.getInt("limits.max-inflight", 64);
+        queueCapacity = config.getInt("limits.max-queued", 4096);
+        byteLimit = config.getLong("limits.max-pending-bytes", 256L * 1024 * 1024);
+        if (operationTimeout.isZero() || operationTimeout.isNegative() || concurrency < 1 || queueCapacity < 0 || byteLimit < 1) throw new IllegalArgumentException("Invalid plugin storage limits");
+        Math.addExact(concurrency, queueCapacity);
         self.worldId = config.getString("world-id", worldRoot.getFileName().toString());
         final String world = config.getString("world-provider", "vanilla");
         final String player = config.getString("player-provider", "vanilla");
+        if (world.equals("vanilla") && Files.exists(self.root.resolve(".plugin-storage-cache"))) {
+            throw new IllegalStateException("Refusing vanilla storage for a plugin-owned world cache; restore its provider configuration or explicitly migrate the world");
+        }
+        if (player.equals("vanilla") && Files.exists(self.root.resolve(".plugin-player-cache"))) {
+            throw new IllegalStateException("Refusing vanilla player storage for a plugin-owned player cache");
+        }
         if (!world.equals("vanilla")) {
             self.worldProvider = self.worlds.get(Key.key(world));
             if (self.worldProvider == null) throw new IllegalStateException("Selected world storage provider did not register: " + world);
@@ -93,8 +109,24 @@ public final class PluginPersistence implements PersistenceRegistry {
         if (!player.equals("vanilla")) {
             final PlayerStorageProvider provider = self.players.get(Key.key(player));
             if (provider == null) throw new IllegalStateException("Selected player storage provider did not register: " + player);
-            self.playerStore = managed(await(provider.open(new PlayerStorageContext(config.getString("player-scope", self.worldId)))));
+            final String scope = config.getString("player-scope", self.worldId);
+            final Path marker = self.root.resolve(".plugin-player-cache");
+            final String identity = player + "\n" + scope;
+            if (Files.exists(marker) && !Files.readString(marker).equals(identity)) throw new IllegalStateException("Player cache belongs to a different storage binding");
+            self.playerStore = managed(await(provider.open(new PlayerStorageContext(scope))));
+            Files.writeString(marker, identity);
         }
+    }
+
+    public static YamlConfiguration loadConfiguration(final Path file) throws IOException {
+        final YamlConfiguration config = new YamlConfiguration();
+        if (Files.exists(file)) {
+            try { config.load(file.toFile()); }
+            catch (org.bukkit.configuration.InvalidConfigurationException error) {
+                throw new IOException("Malformed plugin storage configuration; refusing to fall back to vanilla", error);
+            }
+        }
+        return config;
     }
 
     private static boolean hasPersistentWorldFiles(final Path root) throws IOException {
@@ -104,7 +136,7 @@ public final class PluginPersistence implements PersistenceRegistry {
     }
 
     private static <K> ManagedStore<K> managed(final RecordStore<K> store) {
-        return new ManagedStore<>(store, IO, Duration.ofSeconds(10), 64, 4096, 256L * 1024 * 1024, PluginPersistence::fatal);
+        return new ManagedStore<>(store, IO, operationTimeout, concurrency, queueCapacity, byteLimit, PluginPersistence::fatal);
     }
 
     private ManagedStore<WorldRecordKey> store(final Optional<Key> dimension) {
@@ -131,7 +163,7 @@ public final class PluginPersistence implements PersistenceRegistry {
     private static Address address(final Path path) {
         final String relative = INSTANCE.root.relativize(path.toAbsolutePath().normalize()).toString().replace('\\', '/');
         final String[] parts = relative.split("/");
-        for (final var dimension : INSTANCE.dimensions.entrySet()) {
+        for (final var dimension : INSTANCE.dimensions.entrySet().stream().sorted(java.util.Comparator.<Map.Entry<String, Key>>comparingInt(entry -> entry.getKey().length()).reversed()).toList()) {
             final String prefix = dimension.getKey() + "/data/";
             if (!relative.startsWith(prefix)) continue;
             final String file = relative.substring(prefix.length()).replaceFirst("\\.dat$", "");
@@ -192,8 +224,18 @@ public final class PluginPersistence implements PersistenceRegistry {
     public static Cancellable loadChunk(final ServerLevel world, final int x, final int z, final RegionFileType type,
                                         final BiConsumer<CompoundTag, Throwable> callback) {
         final CompletableFuture<CompoundTag> future = store(world).read(chunkKey(x, z, type)).thenApplyAsync(record -> {
-            try { return record.isPresent() ? decode(record.get()) : null; }
-            catch (IOException error) { throw fail(error); }
+            try {
+                if (record.isEmpty()) return null;
+                final CompoundTag tag = decode(record.get());
+                if (type == RegionFileType.CHUNK_DATA && !net.minecraft.world.level.chunk.storage.SerializableChunkData.getChunkCoordinate(tag).equals(new net.minecraft.world.level.ChunkPos(x, z))) {
+                    throw new IllegalArgumentException("Stored chunk coordinates do not match its key");
+                }
+                if (type == RegionFileType.ENTITY_DATA) {
+                    final int[] pos = tag.getIntArray("Position").orElseThrow(() -> new IllegalArgumentException("Missing entity chunk coordinates"));
+                    if (pos.length != 2 || pos[0] != x || pos[1] != z) throw new IllegalArgumentException("Stored entity coordinates do not match its key");
+                }
+                return tag;
+            } catch (Throwable error) { throw fail(error); }
         }, IO).toCompletableFuture();
         future.whenComplete((tag, error) -> callback.accept(tag, error));
         return () -> future.cancel(false);
@@ -209,13 +251,21 @@ public final class PluginPersistence implements PersistenceRegistry {
     }
 
     private static CompoundTag decode(final StorageRecord record) throws IOException {
-        try { return io.nzsmp.folia.generation.ChunkImporter.readNbt(record.payload()); }
-        catch (Throwable error) { throw fail(error); }
+        try {
+            final CompoundTag tag = io.nzsmp.folia.generation.ChunkImporter.readNbt(record.payload());
+            final int version = tag.getIntOr("DataVersion", tag.getCompoundOrEmpty("Data").getIntOr("DataVersion", -1));
+            if (version > SharedConstants.getCurrentVersion().dataVersion().version()) throw new IllegalArgumentException("Record is from a newer Minecraft version");
+            return tag;
+        } catch (Throwable error) { throw fail(error); }
     }
 
-    public static CompletableFuture<Void> preloadPlayer(final UUID id) {
+    public static CompletableFuture<Void> preloadPlayer(final UUID id, final java.util.function.BooleanSupplier connected) {
         final List<PlayerRecordKey> keys = java.util.Arrays.stream(PlayerRecordKey.Kind.values()).map(kind -> new PlayerRecordKey(id, kind)).toList();
-        return INSTANCE.playerStore.readBatch(keys).thenAccept(INSTANCE.playerCache::putAll).toCompletableFuture();
+        return INSTANCE.playerStore.readBatch(keys).thenAccept(records -> {
+            synchronized (INSTANCE.playerCache) {
+                if (connected.getAsBoolean()) INSTANCE.playerCache.putAll(records);
+            }
+        }).toCompletableFuture();
     }
 
     public static Optional<StorageRecord> readPlayer(final UUID id, final PlayerRecordKey.Kind kind) {
@@ -241,7 +291,9 @@ public final class PluginPersistence implements PersistenceRegistry {
     }
 
     public static void releasePlayer(final UUID id) {
-        for (final PlayerRecordKey.Kind kind : PlayerRecordKey.Kind.values()) INSTANCE.playerCache.remove(new PlayerRecordKey(id, kind));
+        synchronized (INSTANCE.playerCache) {
+            for (final PlayerRecordKey.Kind kind : PlayerRecordKey.Kind.values()) INSTANCE.playerCache.remove(new PlayerRecordKey(id, kind));
+        }
     }
 
     public static String readPlayerJson(final Path path, final PlayerRecordKey.Kind kind) {
@@ -273,11 +325,11 @@ public final class PluginPersistence implements PersistenceRegistry {
 
     private void hydrateAssets() throws IOException {
         // Only known asset directories are caches. Never walk or materialize chunk records.
-        for (final String name : List.of("datapacks", "generated", "resourcepacks", "icon.png")) clearCache(this.root.resolve(name));
+        for (final String name : List.of("datapacks", "generated", "resourcepacks", "icon.png", "paper-world.yml")) clearCache(this.root.resolve(name));
         final Path dimensions = this.root.resolve("dimensions");
         if (Files.isDirectory(dimensions)) {
             try (var paths = Files.walk(dimensions, 32)) {
-                for (final Path generated : paths.filter(path -> path.getFileName().toString().equals("generated")).toList()) clearCache(generated);
+                for (final Path generated : paths.filter(path -> (path.getFileName().toString().equals("generated") || path.getFileName().toString().equals("paper-world.yml"))).toList()) clearCache(generated);
             }
         }
         final ManagedStore<WorldRecordKey> rootStore = this.store(Optional.empty());
@@ -319,8 +371,8 @@ public final class PluginPersistence implements PersistenceRegistry {
     }
 
     private static boolean isAsset(final String relative) {
-        return relative.equals("icon.png") || relative.startsWith("datapacks/") || relative.startsWith("resourcepacks/")
-            || relative.startsWith("generated/") || relative.matches("dimensions/[^/]+/.+/generated/.+");
+        return relative.equals("icon.png") || relative.equals("paper-world.yml") || relative.startsWith("datapacks/") || relative.startsWith("resourcepacks/")
+            || relative.startsWith("generated/") || (relative.matches("dimensions/[^/]+/.+/generated/.+") || relative.matches("dimensions/[^/]+/.+/paper-world\\.yml"));
     }
 
     public static void saveAsset(final Path file) throws IOException {
@@ -344,11 +396,11 @@ public final class PluginPersistence implements PersistenceRegistry {
         try {
             final Set<String> current = new HashSet<>();
             final List<Path> roots = new ArrayList<>();
-            for (final String name : List.of("datapacks", "generated", "resourcepacks", "icon.png")) roots.add(this.root.resolve(name));
+            for (final String name : List.of("datapacks", "generated", "resourcepacks", "icon.png", "paper-world.yml")) roots.add(this.root.resolve(name));
             final Path dimensions = this.root.resolve("dimensions");
             if (Files.isDirectory(dimensions)) {
                 try (var paths = Files.walk(dimensions, 32)) {
-                    paths.filter(path -> path.getFileName().toString().equals("generated")).forEach(roots::add);
+                    paths.filter(path -> (path.getFileName().toString().equals("generated") || path.getFileName().toString().equals("paper-world.yml"))).forEach(roots::add);
                 }
             }
             final ManagedStore<WorldRecordKey> store = this.store(Optional.empty());

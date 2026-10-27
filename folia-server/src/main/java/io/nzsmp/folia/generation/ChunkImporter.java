@@ -39,14 +39,16 @@ public final class ChunkImporter {
         if (!(target instanceof ProtoChunk)) throw new IllegalArgumentException("Generation target is not a protochunk");
         if (result instanceof SerializedChunkData serialized) {
             final CompoundTag tag = readNbt(serialized.nbt());
-            if (tag.getIntOr("DataVersion", -1) != serialized.dataVersion() || serialized.dataVersion() > layout.sectionEncoding().dataVersion()) {
+            if (tag.getIntOr("DataVersion", -1) != serialized.dataVersion() || serialized.dataVersion() < 0 || serialized.dataVersion() > layout.sectionEncoding().dataVersion()) {
                 throw new IllegalArgumentException("Unsupported or inconsistent chunk DataVersion");
             }
             if (!SerializableChunkData.getChunkCoordinate(tag).equals(target.getPos())) throw new IllegalArgumentException("Chunk coordinate mismatch");
             final CompoundTag upgraded = world.getChunkSource().chunkMap.upgradeChunkTag(tag);
-            final SerializableChunkData data = SerializableChunkData.parse(world, world.palettedContainerFactory(), upgraded);
+            final SerializableChunkData data = SerializableChunkData.parse(world, world.palettedContainerFactory(), upgraded, true);
             if (data == null || !data.chunkStatus().isOrAfter(ChunkStatus.FEATURES)) throw new IllegalArgumentException("Serialized terrain must be complete through FEATURES");
             final ProtoChunk chunk = data.read(world, world.getPoiManager(), world.getChunkSource().chunkMap.storageInfo(), target.getPos());
+            final Set<BlockPos> blockEntityPositions = new HashSet<>();
+            for (final CompoundTag blockEntity : data.blockEntities()) validateBlockEntity(chunk, blockEntity, blockEntityPositions);
             chunk.setPersistedStatus(ChunkStatus.SPAWN);
             chunk.setLightCorrect(false); // validate light by recomputing; do not trust foreign engine metadata
             chunk.markUnsaved();
@@ -115,14 +117,10 @@ public final class ChunkImporter {
                 }
             }
         }
+        final Set<BlockPos> blockEntityPositions = new HashSet<>();
         for (final io.nzsmp.folia.data.BinaryData bytes : extras.blockEntities()) {
             final CompoundTag tag = readNbt(bytes);
-            final BlockPos pos = BlockPos.of(tag.getLongOr("pos", 0L));
-            final int x = tag.getIntOr("x", pos.getX());
-            final int y = tag.getIntOr("y", pos.getY());
-            final int z = tag.getIntOr("z", pos.getZ());
-            if ((x >> 4) != target.getPos().x() || (z >> 4) != target.getPos().z() || world.isOutsideBuildHeight(y)
-                || !target.getBlockState(new BlockPos(x, y, z)).hasBlockEntity()) throw new IllegalArgumentException("Invalid block entity position/state");
+            validateBlockEntity(target, tag, blockEntityPositions);
             target.setBlockEntityNbt(tag);
         }
         final Set<Heightmap.Types> missing = EnumSet.copyOf(ChunkStatus.SPAWN.heightmapsAfter());
@@ -137,6 +135,26 @@ public final class ChunkImporter {
         target.setLightCorrect(false);
         target.markUnsaved();
         return target;
+    }
+
+    public static void validateBlockEntity(final ChunkAccess chunk, final CompoundTag tag, final Set<BlockPos> seen) {
+        if (tag.getInt("x").isEmpty() || tag.getInt("y").isEmpty() || tag.getInt("z").isEmpty() || tag.getString("id").isEmpty()) {
+            throw new IllegalArgumentException("Block entities require id and absolute x/y/z");
+        }
+        final BlockPos pos = new BlockPos(tag.getIntOr("x", 0), tag.getIntOr("y", 0), tag.getIntOr("z", 0));
+        final BlockState state = chunk.getBlockState(pos);
+        if ((pos.getX() >> 4) != chunk.getPos().x() || (pos.getZ() >> 4) != chunk.getPos().z()
+            || chunk.isOutsideBuildHeight(pos) || !state.hasBlockEntity() || !seen.add(pos)) {
+            throw new IllegalArgumentException("Duplicate or invalid block entity position/state");
+        }
+        final String name = tag.getStringOr("id", "");
+        if (!name.equals("DUMMY")) { // vanilla protochunk placeholder creates the state's default block entity
+            final Identifier id = Identifier.tryParse(name);
+            if (id == null || !net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.containsKey(id)
+                || !net.minecraft.core.registries.BuiltInRegistries.BLOCK_ENTITY_TYPE.getValue(id).isValid(state)) {
+                throw new IllegalArgumentException("Block entity type does not match its block state");
+            }
+        }
     }
 
     private static void checkSection(final ServerLevel world, final Set<Integer> seen, final int sectionY) {
