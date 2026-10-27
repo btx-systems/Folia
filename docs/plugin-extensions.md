@@ -4,6 +4,10 @@ This fork adds transport-independent extension points under `sh.btx.nzsmp.folia`
 The APIs do not require a network service, database, or a particular compression
 or delta-storage algorithm. Providers are responsible for their implementation.
 
+The fork publishes `sh.btx.nzsmp.folia:folia-api` and
+`sh.btx.nzsmp.folia:dev-bundle` to GitHub Packages. See the repository README
+for repository credentials and version selection.
+
 ## Development workflow
 
 The implementation branch is based on Folia `8cffa90`, Minecraft 26.3 and the

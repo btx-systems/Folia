@@ -55,5 +55,5 @@ jobs:
           version=$(./gradlew --quiet printPaperVersion)
           echo '### Published Folia libraries' >> "$GITHUB_STEP_SUMMARY"
           echo '[Browse packages](https://github.com/btx-systems/Folia/packages) or resolve them from `https://maven.pkg.github.com/btx-systems/folia`.' >> "$GITHUB_STEP_SUMMARY"
-          echo "API: \`dev.folia:folia-api:$version\`" >> "$GITHUB_STEP_SUMMARY"
-          echo "Development bundle: \`dev.folia:dev-bundle:$version\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "API: \`sh.btx.nzsmp.folia:folia-api:$version\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Development bundle: \`sh.btx.nzsmp.folia:dev-bundle:$version\`" >> "$GITHUB_STEP_SUMMARY"

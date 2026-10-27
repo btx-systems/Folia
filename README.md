@@ -25,7 +25,7 @@ java -jar folia-paperclip-<version>.jar --nogui
 On the first start, follow the server's EULA instructions before restarting.
 
 The [Publish to GitHub Packages workflow](https://github.com/btx-systems/Folia/actions/workflows/publish.yml)
-publishes `dev.folia:folia-api` (including sources and Javadocs) and `dev.folia:dev-bundle`
+publishes `sh.btx.nzsmp.folia:folia-api` (including sources and Javadocs) and `sh.btx.nzsmp.folia:dev-bundle`
 on pushes to `ver/**`, or when manually dispatched on a version branch. Published versions
 use `<mcVersion>.build.<run number>-<channel>`, for example `26.3.build.42-alpha`.
 Find the versions under the repository's [Packages](https://github.com/btx-systems/Folia/packages).
@@ -45,7 +45,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("dev.folia:folia-api:26.3.build.42-alpha") // Replace with a published version.
+    compileOnly("sh.btx.nzsmp.folia:folia-api:26.3.build.42-alpha") // Replace with a published version.
 }
 ```
 
@@ -255,19 +255,22 @@ even though there is no main thread anymore.
 - More to come here
 
 ### Maven information
+Use a version published by this fork and configure GitHub Packages credentials
+for the `github-packages` server ID in your Maven settings.
+
 * Maven Repo (for folia-api):
 ```xml
 <repository>
-    <id>papermc</id>
-    <url>https://repo.papermc.io/repository/maven-public/</url>
+    <id>github-packages</id>
+    <url>https://maven.pkg.github.com/btx-systems/folia</url>
 </repository>
 ```
 * Artifact Information:
 ```xml
 <dependency>
-    <groupId>dev.folia</groupId>
+    <groupId>sh.btx.nzsmp.folia</groupId>
     <artifactId>folia-api</artifactId>
-    <version>[26.3.build,)</version>
+    <version>26.3.build.42-alpha</version> <!-- Replace with a published version. -->
     <scope>provided</scope>
 </dependency>
  ```
