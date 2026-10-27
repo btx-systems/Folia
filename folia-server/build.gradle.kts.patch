@@ -95,3 +95,22 @@
      versionFamily(paperweight.minecraftVersion.map { it.split(".", "-").takeWhile { part -> part.toIntOrNull() != null }.take(2).joinToString(".") })
      version(paperweight.minecraftVersion)
  
+@@ -356,4 +_,18 @@
+             }
+         }
+     }
++}
++
++// NZSMP - import-only benchmark; no world data, network service, or production backend required.
++tasks.register<JavaExec>("benchmarkChunkImports") {
++    group = "verification"
++    description = "Compare Bukkit setters, packed palettes and encoded section import"
++    dependsOn(tasks.testClasses)
++    classpath = sourceSets.test.get().runtimeClasspath
++    mainClass.set("sh.btx.nzsmp.folia.GenerationFastPathBenchmark")
++    workingDir = layout.buildDirectory.dir("chunk-import-benchmark").get().asFile
++    javaLauncher.set(project.javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(25)) })
++    maxHeapSize = "2G"
++    jvmArgs("--enable-native-access=ALL-UNNAMED")
++    doFirst { workingDir.mkdirs() }
+ }

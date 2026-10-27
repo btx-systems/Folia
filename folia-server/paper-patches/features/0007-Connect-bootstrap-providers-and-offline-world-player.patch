@@ -1,0 +1,106 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: btx-systems <jappleid441@gmail.com>
+Date: Tue, 27 Oct 2026 14:30:25 +1300
+Subject: [PATCH] Connect bootstrap providers and offline world player storage
+
+
+diff --git a/src/main/java/io/papermc/paper/plugin/bootstrap/PluginBootstrapContextImpl.java b/src/main/java/io/papermc/paper/plugin/bootstrap/PluginBootstrapContextImpl.java
+index 0bb7694188d5fb75bb756ce75d0060ea980027ee..ce72f15da60e8465076b3b8039d87f9ed48cae2e 100644
+--- a/src/main/java/io/papermc/paper/plugin/bootstrap/PluginBootstrapContextImpl.java
++++ b/src/main/java/io/papermc/paper/plugin/bootstrap/PluginBootstrapContextImpl.java
+@@ -63,6 +63,11 @@ public final class PluginBootstrapContextImpl implements BootstrapContext {
+         return this.lifecycleEventManager;
+     }
+ 
++    @Override
++    public io.nzsmp.folia.storage.PersistenceRegistry getPersistenceRegistry() {
++        return io.nzsmp.folia.storage.PluginPersistence.INSTANCE;
++    }
++
+     public void lockLifecycleEventRegistration() {
+         this.allowsLifecycleRegistration = false;
+     }
+diff --git a/src/main/java/io/papermc/paper/world/PaperWorldLoader.java b/src/main/java/io/papermc/paper/world/PaperWorldLoader.java
+index 219d2ec1a0cff79604a2a6d8857679acd8f21ccf..8204880b3e5c0bc8a99b99c4581b00333ed62c05 100644
+--- a/src/main/java/io/papermc/paper/world/PaperWorldLoader.java
++++ b/src/main/java/io/papermc/paper/world/PaperWorldLoader.java
+@@ -169,6 +169,10 @@ public record PaperWorldLoader(MinecraftServer server, String levelId) {
+     private boolean hasDimensionData(final LevelStem stem) {
+         final ResourceKey<LevelStem> stemKey = this.server.registryAccess().lookupOrThrow(Registries.LEVEL_STEM).getResourceKey(stem).orElseThrow();
+         final ResourceKey<Level> dimensionKey = Registries.levelStemToLevel(stemKey);
++        if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) {
++            final java.nio.file.Path path = WorldGenSettings.TYPE.id().withSuffix(".dat").resolveAgainst(this.server.storageSource.getDimensionPath(dimensionKey).resolve(LevelResource.DATA.id()));
++            return io.nzsmp.folia.storage.PluginPersistence.exists(path);
++        }
+         return Files.isDirectory(this.server.storageSource.getDimensionPath(dimensionKey));
+     }
+ 
+diff --git a/src/main/java/io/papermc/paper/world/migration/WorldFolderMigration.java b/src/main/java/io/papermc/paper/world/migration/WorldFolderMigration.java
+index 3e72dd125e5e7d577f0c1187d40b17cc6c2fea5a..8178457121d8caffad2437ecaef215172f2ed992 100644
+--- a/src/main/java/io/papermc/paper/world/migration/WorldFolderMigration.java
++++ b/src/main/java/io/papermc/paper/world/migration/WorldFolderMigration.java
+@@ -44,6 +44,8 @@ public final class WorldFolderMigration {
+         final ResourceKey<LevelStem> stemKey,
+         final ResourceKey<Level> dimensionKey
+     ) throws IOException {
++        if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return; // NZSMP - custom stores have no vanilla folders to migrate
++
+         final WorldMigrationContext context = new WorldMigrationContext(rootAccess, registryAccess, worldName, stemKey, dimensionKey);
+         final MigrationMode mode = classifyStartupMigration(context);
+         if (mode != MigrationMode.NO_OP) {
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftOfflinePlayer.java b/src/main/java/org/bukkit/craftbukkit/CraftOfflinePlayer.java
+index 1aa8f1e0a3093a8b9e77213c56f987cd6ca7df86..324f8fd328d4c3931ef76452cf909211473490d6 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftOfflinePlayer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftOfflinePlayer.java
+@@ -224,7 +224,7 @@ public class CraftOfflinePlayer implements OfflinePlayer, ConfigurationSerializa
+         if (data != null) {
+             return data.getLong("firstPlayed").orElseGet(() -> {
+                 File file = this.getDataFile();
+-                return file.lastModified();
++                return io.nzsmp.folia.storage.PluginPersistence.playerEnabled() ? io.nzsmp.folia.storage.PluginPersistence.playerModified(this.getUniqueId()) : file.lastModified();
+             });
+         } else {
+             return 0;
+@@ -241,7 +241,7 @@ public class CraftOfflinePlayer implements OfflinePlayer, ConfigurationSerializa
+         if (data != null) {
+             return data.getLong("lastPlayed").orElseGet(() -> {
+                 File file = this.getDataFile();
+-                return file.lastModified();
++                return io.nzsmp.folia.storage.PluginPersistence.playerEnabled() ? io.nzsmp.folia.storage.PluginPersistence.playerModified(this.getUniqueId()) : file.lastModified();
+             });
+         } else {
+             return 0;
+@@ -264,7 +264,7 @@ public class CraftOfflinePlayer implements OfflinePlayer, ConfigurationSerializa
+             return data.getLong("LastLogin").orElseGet(() -> {
+                 // if the player file cannot provide accurate data, this is probably the closest we can approximate
+                 File file = getDataFile();
+-                return file.lastModified();
++                return io.nzsmp.folia.storage.PluginPersistence.playerEnabled() ? io.nzsmp.folia.storage.PluginPersistence.playerModified(this.getUniqueId()) : file.lastModified();
+             });
+         } else {
+             return 0;
+@@ -282,7 +282,7 @@ public class CraftOfflinePlayer implements OfflinePlayer, ConfigurationSerializa
+             return data.getLong("LastSeen").orElseGet(() -> {
+                 // if the player file cannot provide accurate data, this is probably the closest we can approximate
+                 File file = getDataFile();
+-                return file.lastModified();
++                return io.nzsmp.folia.storage.PluginPersistence.playerEnabled() ? io.nzsmp.folia.storage.PluginPersistence.playerModified(this.getUniqueId()) : file.lastModified();
+             });
+         } else {
+             return 0;
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index c1f7510917ebe606280c63d6150829fb0562f474..0174077bdcc992b413171dba6854a9d6766e99ea 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -2206,6 +2206,11 @@ public final class CraftServer implements Server {
+ 
+     @Override
+     public OfflinePlayer[] getOfflinePlayers() {
++        if (io.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
++            final Set<OfflinePlayer> result = new HashSet<>(this.getOnlinePlayers());
++            io.nzsmp.folia.storage.PluginPersistence.playerIds().forEach(id -> result.add(this.getOfflinePlayer(id)));
++            return result.toArray(OfflinePlayer[]::new);
++        }
+         PlayerDataStorage storage = this.console.getPlayerList().playerIo;
+         String[] files = storage.getPlayerDir().list((dir, name) -> name.endsWith(".dat"));
+         Set<OfflinePlayer> players = new HashSet<>();

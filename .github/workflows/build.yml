@@ -2,15 +2,19 @@ name: Patch and Build
 
 on:
   push:
-    branches-ignore:
-      - ver/26.3.x
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     # Only run on PRs if the source branch is on someone else's repo
     if: ${{ github.event_name != 'pull_request' || github.repository != github.event.pull_request.head.repo.full_name }}
     runs-on: ubuntu-latest
+    env:
+      BUILD_NUMBER: ${{ github.run_number }}
     steps:
       - name: Checkout Git Repository
         uses: actions/checkout@v7
@@ -30,4 +34,22 @@ jobs:
           ./gradlew applyAllPatches --stacktrace
 
       - name: Build
-        run: ./gradlew build --stacktrace
+        run: ./gradlew build :folia-server:createPaperclipJar --stacktrace
+
+      - name: Upload Runnable Paperclip Jar
+        id: paperclip
+        uses: actions/upload-artifact@v7
+        with:
+          name: folia-paperclip-${{ github.run_number }}
+          path: folia-server/build/libs/folia-paperclip-*.jar
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Link Paperclip Download
+        env:
+          ARTIFACT_URL: ${{ steps.paperclip.outputs.artifact-url }}
+        run: |
+          echo "### Runnable Folia server" >> "$GITHUB_STEP_SUMMARY"
+          echo "[Download Paperclip jar]($ARTIFACT_URL) (retained for 30 days)." >> "$GITHUB_STEP_SUMMARY"
+          echo 'Extract the archive and run with Java 25: `java -jar folia-paperclip-<version>.jar --nogui`.' >> "$GITHUB_STEP_SUMMARY"

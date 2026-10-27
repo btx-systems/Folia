@@ -1,0 +1,461 @@
+{
+  "java": "25.0.2",
+  "architecture": "aarch64",
+  "active_processors": 4,
+  "heap_max": "2G",
+  "prewarm_iterations": 100,
+  "prewarm_sections": 128,
+  "warmups_per_case": 20,
+  "samples_per_case": 15,
+  "scope": "Section import only; excludes provider work, transport, lighting, heightmaps and world insertion. Owned input array production is outside timing.",
+  "forks": [
+    {
+      "fork": 1,
+      "results": [
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "bukkit-setBlock",
+          "median_ms": 2.101,
+          "p95_ms": 2.135,
+          "median_alloc_bytes": 2945688,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "packed-copy",
+          "median_ms": 0.495,
+          "p95_ms": 0.514,
+          "median_alloc_bytes": 724224,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "packed-owned",
+          "median_ms": 0.498,
+          "p95_ms": 0.512,
+          "median_alloc_bytes": 674688,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "encoded-sections",
+          "median_ms": 0.534,
+          "p95_ms": 0.556,
+          "median_alloc_bytes": 711936,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "bukkit-setBlock",
+          "median_ms": 1.585,
+          "p95_ms": 5.665,
+          "median_alloc_bytes": 2550600,
+          "checksum": 1776
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "packed-copy",
+          "median_ms": 0.139,
+          "p95_ms": 0.152,
+          "median_alloc_bytes": 203232,
+          "checksum": 1776
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "packed-owned",
+          "median_ms": 0.137,
+          "p95_ms": 0.15,
+          "median_alloc_bytes": 190560,
+          "checksum": 1776
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "encoded-sections",
+          "median_ms": 0.152,
+          "p95_ms": 0.169,
+          "median_alloc_bytes": 194016,
+          "checksum": 1776
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "bukkit-setBlock",
+          "median_ms": 22.589,
+          "p95_ms": 26.587,
+          "median_alloc_bytes": 31174048,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "packed-copy",
+          "median_ms": 5.214,
+          "p95_ms": 6.564,
+          "median_alloc_bytes": 7664704,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "packed-owned",
+          "median_ms": 5.201,
+          "p95_ms": 5.332,
+          "median_alloc_bytes": 7140448,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "encoded-sections",
+          "median_ms": 5.667,
+          "p95_ms": 7.496,
+          "median_alloc_bytes": 7534656,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "bukkit-setBlock",
+          "median_ms": 16.072,
+          "p95_ms": 19.818,
+          "median_alloc_bytes": 26983432,
+          "checksum": 18650
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "packed-copy",
+          "median_ms": 1.355,
+          "p95_ms": 1.515,
+          "median_alloc_bytes": 2136448,
+          "checksum": 18650
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "packed-owned",
+          "median_ms": 1.346,
+          "p95_ms": 1.481,
+          "median_alloc_bytes": 2003360,
+          "checksum": 18650
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "encoded-sections",
+          "median_ms": 1.441,
+          "p95_ms": 1.584,
+          "median_alloc_bytes": 2024736,
+          "checksum": 18650
+        }
+      ]
+    },
+    {
+      "fork": 2,
+      "results": [
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "bukkit-setBlock",
+          "median_ms": 2.135,
+          "p95_ms": 2.264,
+          "median_alloc_bytes": 2945688,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "packed-copy",
+          "median_ms": 0.499,
+          "p95_ms": 0.52,
+          "median_alloc_bytes": 724224,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "packed-owned",
+          "median_ms": 0.504,
+          "p95_ms": 8.034,
+          "median_alloc_bytes": 674688,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "encoded-sections",
+          "median_ms": 0.541,
+          "p95_ms": 0.6,
+          "median_alloc_bytes": 711936,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "bukkit-setBlock",
+          "median_ms": 1.578,
+          "p95_ms": 7.56,
+          "median_alloc_bytes": 2550600,
+          "checksum": 1776
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "packed-copy",
+          "median_ms": 0.138,
+          "p95_ms": 0.161,
+          "median_alloc_bytes": 203232,
+          "checksum": 1776
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "packed-owned",
+          "median_ms": 0.137,
+          "p95_ms": 0.173,
+          "median_alloc_bytes": 190560,
+          "checksum": 1776
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "encoded-sections",
+          "median_ms": 0.152,
+          "p95_ms": 0.179,
+          "median_alloc_bytes": 194016,
+          "checksum": 1776
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "bukkit-setBlock",
+          "median_ms": 22.463,
+          "p95_ms": 22.993,
+          "median_alloc_bytes": 31174048,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "packed-copy",
+          "median_ms": 5.235,
+          "p95_ms": 5.515,
+          "median_alloc_bytes": 7664704,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "packed-owned",
+          "median_ms": 5.254,
+          "p95_ms": 8.552,
+          "median_alloc_bytes": 7140448,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "encoded-sections",
+          "median_ms": 5.643,
+          "p95_ms": 6.028,
+          "median_alloc_bytes": 7534656,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "bukkit-setBlock",
+          "median_ms": 15.809,
+          "p95_ms": 19.301,
+          "median_alloc_bytes": 26983432,
+          "checksum": 18650
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "packed-copy",
+          "median_ms": 1.347,
+          "p95_ms": 1.393,
+          "median_alloc_bytes": 2136448,
+          "checksum": 18650
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "packed-owned",
+          "median_ms": 1.345,
+          "p95_ms": 1.396,
+          "median_alloc_bytes": 2003360,
+          "checksum": 18650
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "encoded-sections",
+          "median_ms": 1.435,
+          "p95_ms": 1.444,
+          "median_alloc_bytes": 2024736,
+          "checksum": 18650
+        }
+      ]
+    },
+    {
+      "fork": 3,
+      "results": [
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "bukkit-setBlock",
+          "median_ms": 2.18,
+          "p95_ms": 2.211,
+          "median_alloc_bytes": 2945688,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "packed-copy",
+          "median_ms": 0.502,
+          "p95_ms": 0.526,
+          "median_alloc_bytes": 724224,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "packed-owned",
+          "median_ms": 0.506,
+          "p95_ms": 0.535,
+          "median_alloc_bytes": 674688,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "mixed",
+          "path": "encoded-sections",
+          "median_ms": 0.566,
+          "p95_ms": 0.586,
+          "median_alloc_bytes": 713280,
+          "checksum": 7056
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "bukkit-setBlock",
+          "median_ms": 1.597,
+          "p95_ms": 8.78,
+          "median_alloc_bytes": 2550600,
+          "checksum": 1776
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "packed-copy",
+          "median_ms": 0.134,
+          "p95_ms": 0.306,
+          "median_alloc_bytes": 203232,
+          "checksum": 1776
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "packed-owned",
+          "median_ms": 0.135,
+          "p95_ms": 0.173,
+          "median_alloc_bytes": 190560,
+          "checksum": 1776
+        },
+        {
+          "sections": 24,
+          "profile": "stratified",
+          "path": "encoded-sections",
+          "median_ms": 0.154,
+          "p95_ms": 0.204,
+          "median_alloc_bytes": 194016,
+          "checksum": 1776
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "bukkit-setBlock",
+          "median_ms": 23.025,
+          "p95_ms": 26.349,
+          "median_alloc_bytes": 31174048,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "packed-copy",
+          "median_ms": 5.265,
+          "p95_ms": 8.414,
+          "median_alloc_bytes": 7664704,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "packed-owned",
+          "median_ms": 5.212,
+          "p95_ms": 5.32,
+          "median_alloc_bytes": 7140448,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "mixed",
+          "path": "encoded-sections",
+          "median_ms": 5.871,
+          "p95_ms": 6.162,
+          "median_alloc_bytes": 7534656,
+          "checksum": 74676
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "bukkit-setBlock",
+          "median_ms": 16.139,
+          "p95_ms": 19.32,
+          "median_alloc_bytes": 26983432,
+          "checksum": 18650
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "packed-copy",
+          "median_ms": 1.37,
+          "p95_ms": 4.317,
+          "median_alloc_bytes": 2136448,
+          "checksum": 18650
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "packed-owned",
+          "median_ms": 1.361,
+          "p95_ms": 1.394,
+          "median_alloc_bytes": 2003360,
+          "checksum": 18650
+        },
+        {
+          "sections": 254,
+          "profile": "stratified",
+          "path": "encoded-sections",
+          "median_ms": 1.512,
+          "p95_ms": 1.561,
+          "median_alloc_bytes": 2024736,
+          "checksum": 18650
+        }
+      ]
+    }
+  ],
+  "implementation_commit": "a05aacc"
+}

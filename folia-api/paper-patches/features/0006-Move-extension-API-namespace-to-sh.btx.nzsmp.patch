@@ -1,0 +1,17 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: btx-systems <jappleid441@gmail.com>
+Date: Wed, 28 Oct 2026 11:53:32 +1300
+Subject: [PATCH] Move extension API namespace to sh.btx.nzsmp
+
+
+diff --git a/src/main/java/io/papermc/paper/plugin/bootstrap/BootstrapContext.java b/src/main/java/io/papermc/paper/plugin/bootstrap/BootstrapContext.java
+index 553da01ea5b15c9013305a273efd62259887e062..9076942153eaf3ad25799d7cc2d730c994a235b8 100644
+--- a/src/main/java/io/papermc/paper/plugin/bootstrap/BootstrapContext.java
++++ b/src/main/java/io/papermc/paper/plugin/bootstrap/BootstrapContext.java
+@@ -30,5 +30,5 @@ public interface BootstrapContext extends PluginProviderContext, LifecycleEventO
+      *
+      * @return the bootstrap-only persistence registry
+      */
+-    io.nzsmp.folia.storage.PersistenceRegistry getPersistenceRegistry();
++    sh.btx.nzsmp.folia.storage.PersistenceRegistry getPersistenceRegistry();
+ }

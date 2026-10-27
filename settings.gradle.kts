@@ -15,6 +15,8 @@ rootProject.name = "folia"
 include("folia-api")
 include("folia-server")
 include("folia-checkstyle")
+include("extension-examples")
+project(":extension-examples").projectDir = file("examples/plugin-extensions")
 
 gradle.lifecycle.beforeProject {
     val mcVersion = providers.gradleProperty("mcVersion").get().trim()

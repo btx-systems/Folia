@@ -1,0 +1,7 @@
+name: ExtensionExamples
+version: '1.0'
+main: sh.btx.nzsmp.folia.example.ExtensionExamples
+bootstrapper: sh.btx.nzsmp.folia.example.ExampleBootstrap
+api-version: '26.3'
+folia-supported: true
+load: STARTUP
