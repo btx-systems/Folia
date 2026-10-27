@@ -1,0 +1,483 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: btx-systems <jappleid441@gmail.com>
+Date: Wed, 28 Oct 2026 11:53:32 +1300
+Subject: [PATCH] Use sh.btx.nzsmp generation and persistence namespace
+
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java b/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java
+index bfe516700341e20513c760f051064fa161802b98..93a84896300ed6fe55bff39f74a25bd25d934959 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/io/MoonriseRegionFileIO.java
+@@ -160,7 +160,7 @@ public final class MoonriseRegionFileIO {
+     }
+ 
+     public static void flushRegionStorages(final ServerLevel world, final RegionFileType type) throws IOException {
+-        if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) { io.nzsmp.folia.storage.PluginPersistence.flushWorld(world); return; }
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) { sh.btx.nzsmp.folia.storage.PluginPersistence.flushWorld(world); return; }
+         getControllerFor(world, type).getCache().flush();
+     }
+ 
+@@ -177,7 +177,7 @@ public final class MoonriseRegionFileIO {
+     }
+ 
+     public static void flush(final ServerLevel world, final RegionFileType type) {
+-        if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) { io.nzsmp.folia.storage.PluginPersistence.flushWorld(world); return; }
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) { sh.btx.nzsmp.folia.storage.PluginPersistence.flushWorld(world); return; }
+         final RegionDataController taskController = getControllerFor(world, type);
+ 
+         long failures = 1L; // start at 0.13ms
+@@ -493,8 +493,8 @@ public final class MoonriseRegionFileIO {
+ 
+     private static void scheduleSave(final ServerLevel world, final int chunkX, final int chunkZ, final Consumer<BiConsumer<CompoundTag, Throwable>> scheduler,
+                                      final PrioritisedExecutor.PrioritisedTask writeTask, final RegionFileType type, final Priority priority) {
+-        if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) {
+-            io.nzsmp.folia.storage.PluginPersistence.saveChunk(world, chunkX, chunkZ, type, scheduler);
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) {
++            sh.btx.nzsmp.folia.storage.PluginPersistence.saveChunk(world, chunkX, chunkZ, type, scheduler);
+             return;
+         }
+         final RegionDataController taskController = getControllerFor(world, type);
+@@ -772,7 +772,7 @@ public final class MoonriseRegionFileIO {
+     public static Cancellable loadDataAsync(final ServerLevel world, final int chunkX, final int chunkZ,
+                                             final RegionFileType type, final BiConsumer<CompoundTag, Throwable> onComplete,
+                                             final boolean intendingToBlock, final Priority priority) {
+-        if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return io.nzsmp.folia.storage.PluginPersistence.loadChunk(world, chunkX, chunkZ, type, onComplete);
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return sh.btx.nzsmp.folia.storage.PluginPersistence.loadChunk(world, chunkX, chunkZ, type, onComplete);
+         final RegionDataController taskController = getControllerFor(world, type);
+ 
+         final ImmediateCallbackCompletion callbackInfo = new ImmediateCallbackCompletion();
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
+index 2c5cbee74f8c99cf50e388a34eb3a9857bb1ce59..e5de2aa84a83e28f0589f806d73154f3c48c6547 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
+@@ -664,8 +664,8 @@ public final class ChunkTaskScheduler {
+         }
+         // NZSMP - direct async generation starts only after EMPTY has been loaded.
+         if (toStatus == ChunkStatus.STRUCTURE_STARTS && chunk.getPersistedStatus() == ChunkStatus.EMPTY
+-            && this.world.generator instanceof io.nzsmp.folia.generation.AsyncChunkGenerator generator) {
+-            return new io.nzsmp.folia.generation.PluginGenerationTask(this, this.world, chunkX, chunkZ, chunk, generator, initialPriority);
++            && this.world.generator instanceof sh.btx.nzsmp.folia.generation.AsyncChunkGenerator generator) {
++            return new sh.btx.nzsmp.folia.generation.PluginGenerationTask(this, this.world, chunkX, chunkZ, chunk, generator, initialPriority);
+         }
+         if (toStatus == ChunkStatus.LIGHT) {
+             return new ChunkLightTask(this, this.world, chunkX, chunkZ, chunk, initialPriority);
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
+index 4b4344c839411cd8bf1bcfa21af1dfbaa58e58c3..42899039e16428aeadbeb474d7401d95b0b80b7d 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/task/ChunkLoadTask.java
+@@ -330,7 +330,7 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+         @Override
+         protected TaskResult<ReadChunk, Throwable> runOffMain(final CompoundTag data, final Throwable throwable) {
+             if (throwable != null) {
+-                if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, throwable);
++                if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, throwable);
+                 LOGGER.error("Failed to load chunk data for task: " + this.toString() + ", chunk data will be lost", throwable);
+                 return new TaskResult<>(null, null);
+             }
+@@ -345,11 +345,11 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+ 
+                 // unpack the data
+                 final SerializableChunkData chunkData = SerializableChunkData.parse(
+-                    this.world, this.world.palettedContainerFactory(), converted, io.nzsmp.folia.storage.PluginPersistence.worldEnabled()
++                    this.world, this.world.palettedContainerFactory(), converted, sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()
+                 );
+ 
+                 if (chunkData == null) {
+-                    if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) throw new IllegalArgumentException("Invalid stored chunk data");
++                    if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) throw new IllegalArgumentException("Invalid stored chunk data");
+                     LOGGER.error("Deserialized chunk for task: " + this.toString() + " produced null, chunk data will be lost?");
+                 }
+ 
+@@ -361,7 +361,7 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+ 
+                 return new TaskResult<>(new ReadChunk(chunk, chunkData), null);
+             } catch (final Throwable thr2) {
+-                if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, io.nzsmp.folia.storage.PluginPersistence.fail(thr2));
++                if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, sh.btx.nzsmp.folia.storage.PluginPersistence.fail(thr2));
+                 LOGGER.error("Failed to parse chunk data for task: " + this.toString() + ", chunk data will be lost", thr2);
+                 return new TaskResult<>(null, null);
+             }
+@@ -410,7 +410,7 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+         @Override
+         protected TaskResult<PoiChunk, Throwable> runOffMain(final CompoundTag data, final Throwable throwable) {
+             if (throwable != null) {
+-                if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, throwable);
++                if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, throwable);
+                 LOGGER.error("Failed to load poi data for task: " + this.toString() + ", poi data will be lost", throwable);
+                 return new TaskResult<>(PoiChunk.empty(this.world, this.chunkX, this.chunkZ), null);
+             }
+@@ -427,7 +427,7 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+                 // now we need to parse it
+                 return new TaskResult<>(PoiChunk.parse(this.world, this.chunkX, this.chunkZ, converted), null);
+             } catch (final Throwable thr2) {
+-                if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, io.nzsmp.folia.storage.PluginPersistence.fail(thr2));
++                if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, sh.btx.nzsmp.folia.storage.PluginPersistence.fail(thr2));
+                 LOGGER.error("Failed to run parse poi data for task: " + this.toString() + ", poi data will be lost", thr2);
+                 return new TaskResult<>(PoiChunk.empty(this.world, this.chunkX, this.chunkZ), null);
+             }
+@@ -474,7 +474,7 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+         @Override
+         protected TaskResult<CompoundTag, Throwable> runOffMain(final CompoundTag data, final Throwable throwable) {
+             if (throwable != null) {
+-                if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, throwable);
++                if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, throwable);
+                 LOGGER.error("Failed to load entity data for task: " + this.toString() + ", entity data will be lost", throwable);
+                 return new TaskResult<>(null, null);
+             }
+@@ -487,7 +487,7 @@ public final class ChunkLoadTask extends ChunkProgressionTask {
+             try {
+                 return new TaskResult<>(ChunkSystemConverters.convertEntityChunkCompoundTag(data, this.world), null);
+             } catch (final Throwable thr2) {
+-                if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, io.nzsmp.folia.storage.PluginPersistence.fail(thr2));
++                if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) return new TaskResult<>(null, sh.btx.nzsmp.folia.storage.PluginPersistence.fail(thr2));
+                 LOGGER.error("Failed to run converters for entity data for task: " + this.toString() + ", entity data will be lost", thr2);
+                 return new TaskResult<>(null, thr2);
+             }
+diff --git a/net/minecraft/server/Main.java b/net/minecraft/server/Main.java
+index 6ee62c4600cceaad9df530a50655261b3bef250b..310209cc801b6eb20224e60a51815586f9f2b0b5 100644
+--- a/net/minecraft/server/Main.java
++++ b/net/minecraft/server/Main.java
+@@ -196,7 +196,7 @@ public class Main {
+             String levelName = Optional.ofNullable((String) options.valueOf("world")).orElse(settings.getProperties().levelName); // CraftBukkit
+             LevelStorageSource levelStorageSource = LevelStorageSource.createDefault(universePath.toPath());
+             LevelStorageSource.LevelStorageAccess access = levelStorageSource.validateAndCreateAccess(levelName);
+-            io.nzsmp.folia.storage.PluginPersistence.initialize(universePath.toPath().resolve(levelName)); // NZSMP - before any world metadata reads
++            sh.btx.nzsmp.folia.storage.PluginPersistence.initialize(universePath.toPath().resolve(levelName)); // NZSMP - before any world metadata reads
+             Dynamic<?> levelDataTag;
+             if (access.hasWorldData()) {
+                 Dynamic<?> levelDataUnfixed;
+@@ -246,7 +246,7 @@ public class Main {
+                             context -> {
+                                 worldLoader.set(context); // CraftBukkit
+                                 Registry<LevelStem> datapackDimensions = context.datapackDimensions().lookupOrThrow(Registries.LEVEL_STEM);
+-                                io.nzsmp.folia.storage.PluginPersistence.declareDimensions(datapackDimensions.keySet().stream().map(id -> net.kyori.adventure.key.Key.key(id.toString())).toList());
++                                sh.btx.nzsmp.folia.storage.PluginPersistence.declareDimensions(datapackDimensions.keySet().stream().map(id -> net.kyori.adventure.key.Key.key(id.toString())).toList());
+                                 if (levelDataTag != null) {
+                                     // Paper start - migrate startup world
+                                     try {
+diff --git a/net/minecraft/server/MinecraftServer.java b/net/minecraft/server/MinecraftServer.java
+index 14ea9221e7339b0752fe0220266b04412c98fd44..9e3fc2fef99da753efbb2d8ff677587a235e6a4d 100644
+--- a/net/minecraft/server/MinecraftServer.java
++++ b/net/minecraft/server/MinecraftServer.java
+@@ -763,7 +763,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+                 loading.data()
+             );
+         }
+-        io.nzsmp.folia.storage.PluginPersistence.worldReady(serverLevel); // NZSMP - initialize dimension helpers before chunk I/O
++        sh.btx.nzsmp.folia.storage.PluginPersistence.worldReady(serverLevel); // NZSMP - initialize dimension helpers before chunk I/O
+         this.addLevel(serverLevel);
+         this.initWorld(serverLevel, null);
+     }
+@@ -981,7 +981,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+     }
+ 
+     public void saveGlobalData(final boolean flush) {
+-        io.nzsmp.folia.storage.PluginPersistence.scheduleAssetSave();
++        sh.btx.nzsmp.folia.storage.PluginPersistence.scheduleAssetSave();
+         this.scoreboard.storeToSaveDataIfDirty(this.getDataStorage().computeIfAbsent(ScoreboardSaveData.TYPE));
+         // Paper end - split out global level data
+         GameProfile singleplayerProfile = this.getSingleplayerProfile();
+@@ -992,7 +992,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+             this.savedDataStorage.scheduleSave();
+         }
+         // Paper - split out global level data
+-        if (flush) io.nzsmp.folia.storage.PluginPersistence.flushAll();
++        if (flush) sh.btx.nzsmp.folia.storage.PluginPersistence.flushAll();
+     }
+ 
+     public boolean saveEverything(final boolean silent, final boolean flush, final boolean force) {
+@@ -1150,7 +1150,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+         LOGGER.info("Waiting for all RegionFile I/O tasks to complete...");
+         ca.spottedleaf.moonrise.patches.chunk_system.io.MoonriseRegionFileIO.flush((MinecraftServer)(Object)this);
+         LOGGER.info("All RegionFile I/O tasks to complete");
+-        io.nzsmp.folia.storage.PluginPersistence.closeAll(); // NZSMP - providers outlive plugin disable and final saves
++        sh.btx.nzsmp.folia.storage.PluginPersistence.closeAll(); // NZSMP - providers outlive plugin disable and final saves
+         if ((Object)this instanceof net.minecraft.server.dedicated.DedicatedServer) {
+             ca.spottedleaf.moonrise.common.util.MoonriseCommon.haltExecutors();
+         }
+diff --git a/net/minecraft/server/PlayerAdvancements.java b/net/minecraft/server/PlayerAdvancements.java
+index 53d44b8978b3eacb51c87edc9849ad572a3014ef..7a140fca1f6670fb142204b88efe953068ebaccc 100644
+--- a/net/minecraft/server/PlayerAdvancements.java
++++ b/net/minecraft/server/PlayerAdvancements.java
+@@ -111,11 +111,11 @@ public class PlayerAdvancements {
+     }
+ 
+     private void load(final ServerAdvancementManager manager) {
+-        if (io.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
+-            final String json = io.nzsmp.folia.storage.PluginPersistence.readPlayerJson(this.playerSavePath, io.nzsmp.folia.storage.PlayerRecordKey.Kind.ADVANCEMENTS);
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
++            final String json = sh.btx.nzsmp.folia.storage.PluginPersistence.readPlayerJson(this.playerSavePath, sh.btx.nzsmp.folia.storage.PlayerRecordKey.Kind.ADVANCEMENTS);
+             if (json != null) {
+                 try { this.applyFrom(manager, this.codec.parse(JsonOps.INSTANCE, StrictJsonParser.parse(new java.io.StringReader(json))).getOrThrow(JsonParseException::new)); }
+-                catch (Exception error) { throw io.nzsmp.folia.storage.PluginPersistence.fail(error); }
++                catch (Exception error) { throw sh.btx.nzsmp.folia.storage.PluginPersistence.fail(error); }
+             }
+         } else if (Files.isRegularFile(this.playerSavePath)) {
+             try (Reader reader = Files.newBufferedReader(this.playerSavePath, StandardCharsets.UTF_8)) {
+@@ -136,8 +136,8 @@ public class PlayerAdvancements {
+     public void save() {
+         if (org.spigotmc.SpigotConfig.disableAdvancementSaving) return; // Spigot
+         JsonElement json = this.codec.encodeStart(JsonOps.INSTANCE, this.asData()).getOrThrow();
+-        if (io.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
+-            io.nzsmp.folia.storage.PluginPersistence.writePlayerJson(this.playerSavePath, io.nzsmp.folia.storage.PlayerRecordKey.Kind.ADVANCEMENTS, GSON.toJson(json));
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
++            sh.btx.nzsmp.folia.storage.PluginPersistence.writePlayerJson(this.playerSavePath, sh.btx.nzsmp.folia.storage.PlayerRecordKey.Kind.ADVANCEMENTS, GSON.toJson(json));
+             return;
+         }
+ 
+diff --git a/net/minecraft/server/network/config/PrepareSpawnTask.java b/net/minecraft/server/network/config/PrepareSpawnTask.java
+index 65c5e2da5ad82d4a8818c0888fd3529bc803b428..64dcf53def9b828c38ae78634f1e91cd763ceffe 100644
+--- a/net/minecraft/server/network/config/PrepareSpawnTask.java
++++ b/net/minecraft/server/network/config/PrepareSpawnTask.java
+@@ -53,8 +53,8 @@ public class PrepareSpawnTask implements ConfigurationTask {
+ 
+     @Override
+     public void start(final Consumer<Packet<?>> connection) {
+-        if (io.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
+-            this.pluginStorageLoad = io.nzsmp.folia.storage.PluginPersistence.preloadPlayer(this.nameAndId.id(), this.listener::isAcceptingMessages);
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
++            this.pluginStorageLoad = sh.btx.nzsmp.folia.storage.PluginPersistence.preloadPlayer(this.nameAndId.id(), this.listener::isAcceptingMessages);
+             return;
+         }
+         this.startAfterStorage();
+@@ -142,7 +142,7 @@ public class PrepareSpawnTask implements ConfigurationTask {
+         if (this.pluginStorageLoad != null) {
+             if (!this.pluginStorageLoad.isDone()) return false;
+             try { this.pluginStorageLoad.join(); }
+-            catch (Throwable error) { throw io.nzsmp.folia.storage.PluginPersistence.fail(error); }
++            catch (Throwable error) { throw sh.btx.nzsmp.folia.storage.PluginPersistence.fail(error); }
+             this.pluginStorageLoad = null;
+             this.startAfterStorage();
+         }
+@@ -206,7 +206,7 @@ public class PrepareSpawnTask implements ConfigurationTask {
+     public void close() {
+         if (this.pluginStorageLoad != null) this.pluginStorageLoad.cancel(false);
+         this.pluginStorageLoad = null;
+-        io.nzsmp.folia.storage.PluginPersistence.releasePlayer(this.nameAndId.id());
++        sh.btx.nzsmp.folia.storage.PluginPersistence.releasePlayer(this.nameAndId.id());
+         if (this.state instanceof PrepareSpawnTask.Preparing preparing) {
+             preparing.cancel();
+         }
+@@ -367,7 +367,7 @@ public class PrepareSpawnTask implements ConfigurationTask {
+                     .map(tag -> {
+                         org.bukkit.craftbukkit.entity.CraftPlayer craftPlayer = player.getBukkitEntity();
+                         // Only update first played if it is older than the one we have
+-                        long modified = io.nzsmp.folia.storage.PluginPersistence.playerEnabled() ? io.nzsmp.folia.storage.PluginPersistence.playerModified(player.getUUID())
++                        long modified = sh.btx.nzsmp.folia.storage.PluginPersistence.playerEnabled() ? sh.btx.nzsmp.folia.storage.PluginPersistence.playerModified(player.getUUID())
+                             : new java.io.File(PrepareSpawnTask.this.server.getPlayerList().playerIo.getPlayerDir(), player.getStringUUID() + ".dat").lastModified();
+                         if (modified < craftPlayer.getFirstPlayed()) {
+                             craftPlayer.setFirstPlayed(modified);
+@@ -393,7 +393,7 @@ public class PrepareSpawnTask implements ConfigurationTask {
+                     player.loadAndSpawnEnderPearls(tag);
+                     player.loadAndSpawnParentVehicle(tag);
+                 });
+-                io.nzsmp.folia.storage.PluginPersistence.releasePlayer(player.getUUID()); // NZSMP - login-only cache
++                sh.btx.nzsmp.folia.storage.PluginPersistence.releasePlayer(player.getUUID()); // NZSMP - login-only cache
+                 return player;
+             }
+         }
+diff --git a/net/minecraft/server/players/PlayerList.java b/net/minecraft/server/players/PlayerList.java
+index 667eb2749c4e5c9b84b59dd1e9b5c2531738b6bd..49bcb13a95dc84f809eac5fdb24a7022753ee4e3 100644
+--- a/net/minecraft/server/players/PlayerList.java
++++ b/net/minecraft/server/players/PlayerList.java
+@@ -569,7 +569,7 @@ public abstract class PlayerList {
+         player.retireScheduler(); // Paper - Folia schedulers
+         player.getBukkitEntity().packetProcessor.close(); // Folia - region threading
+         player.getAdvancements().clearTriggers();
+-        io.nzsmp.folia.storage.PluginPersistence.releasePlayer(player.getUUID()); // NZSMP - bounded login cache lifetime
++        sh.btx.nzsmp.folia.storage.PluginPersistence.releasePlayer(player.getUUID()); // NZSMP - bounded login cache lifetime
+         this.players.remove(player);
+         this.playersByName.remove(player.getScoreboardName().toLowerCase(java.util.Locale.ROOT)); // Spigot
+         this.server.getCustomBossEvents().onPlayerDisconnect(player);
+@@ -1284,7 +1284,7 @@ public abstract class PlayerList {
+     private Path locateStatsFile(final GameProfile gameProfile) {
+         Path statFolder = this.server.getWorldPath(LevelResource.PLAYER_STATS_DIR);
+         Path uuidStatsFile = statFolder.resolve(gameProfile.id() + ".json");
+-        if (io.nzsmp.folia.storage.PluginPersistence.playerEnabled()) return uuidStatsFile;
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.playerEnabled()) return uuidStatsFile;
+         if (Files.exists(uuidStatsFile)) {
+             return uuidStatsFile;
+         }
+diff --git a/net/minecraft/stats/ServerStatsCounter.java b/net/minecraft/stats/ServerStatsCounter.java
+index ab811669401f9c9864f67963c00c509a7e7b6af7..43c6b0d3e053c6e2ca5a5f2d66ae4c82cc6b0006 100644
+--- a/net/minecraft/stats/ServerStatsCounter.java
++++ b/net/minecraft/stats/ServerStatsCounter.java
+@@ -65,11 +65,11 @@ public class ServerStatsCounter extends StatsCounter {
+ 
+     public ServerStatsCounter(final MinecraftServer server, final Path file) {
+         this.file = file;
+-        if (io.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
+-            final String json = io.nzsmp.folia.storage.PluginPersistence.readPlayerJson(file, io.nzsmp.folia.storage.PlayerRecordKey.Kind.STATISTICS);
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
++            final String json = sh.btx.nzsmp.folia.storage.PluginPersistence.readPlayerJson(file, sh.btx.nzsmp.folia.storage.PlayerRecordKey.Kind.STATISTICS);
+             if (json != null) {
+                 try { this.parse(server.getFixerUpper(), StrictJsonParser.parse(new java.io.StringReader(json))); }
+-                catch (Exception error) { throw io.nzsmp.folia.storage.PluginPersistence.fail(error); }
++                catch (Exception error) { throw sh.btx.nzsmp.folia.storage.PluginPersistence.fail(error); }
+             }
+         } else if (Files.isRegularFile(file)) {
+             try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
+@@ -96,8 +96,8 @@ public class ServerStatsCounter extends StatsCounter {
+ 
+     public void save() {
+         if (org.spigotmc.SpigotConfig.disableStatSaving) return; // Spigot
+-        if (io.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
+-            io.nzsmp.folia.storage.PluginPersistence.writePlayerJson(this.file, io.nzsmp.folia.storage.PlayerRecordKey.Kind.STATISTICS, GSON.toJson(this.toJson()));
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
++            sh.btx.nzsmp.folia.storage.PluginPersistence.writePlayerJson(this.file, sh.btx.nzsmp.folia.storage.PlayerRecordKey.Kind.STATISTICS, GSON.toJson(this.toJson()));
+             return;
+         }
+         try {
+diff --git a/net/minecraft/util/filefix/FileFixerUpper.java b/net/minecraft/util/filefix/FileFixerUpper.java
+index 3500638b2975393b5482e0719d3868e9623ada76..4e08d53f75d5b99e932cdbcd9d8ade5e1d3090e0 100644
+--- a/net/minecraft/util/filefix/FileFixerUpper.java
++++ b/net/minecraft/util/filefix/FileFixerUpper.java
+@@ -81,7 +81,7 @@ public class FileFixerUpper {
+         final LevelStorageSource.LevelStorageAccess worldAccess, Dynamic<?> levelDataTag, final UpgradeProgress upgradeProgress, final int toVersion
+     ) throws FileFixException {
+         int loadedVersion = NbtUtils.getDataVersion(levelDataTag);
+-        if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled() && this.requiresFileFixing(loadedVersion)) {
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled() && this.requiresFileFixing(loadedVersion)) {
+             throw new IllegalStateException("The selected storage backend requires an explicit world-layout migration before this version can load it");
+         }
+         if (this.requiresFileFixing(loadedVersion)) {
+diff --git a/net/minecraft/world/level/levelgen/structure/templatesystem/StructureTemplateManager.java b/net/minecraft/world/level/levelgen/structure/templatesystem/StructureTemplateManager.java
+index 5750fff10178531ca8a7fe3bfdaebf8dff1c01d8..5381ce89d6d83a4bede328d334b65fa868c17821 100644
+--- a/net/minecraft/world/level/levelgen/structure/templatesystem/StructureTemplateManager.java
++++ b/net/minecraft/world/level/levelgen/structure/templatesystem/StructureTemplateManager.java
+@@ -158,7 +158,7 @@ public class StructureTemplateManager {
+             }
+         }
+ 
+-        io.nzsmp.folia.storage.PluginPersistence.saveAsset(file); // NZSMP - persist server-managed structure assets
++        sh.btx.nzsmp.folia.storage.PluginPersistence.saveAsset(file); // NZSMP - persist server-managed structure assets
+         return true;
+     }
+ 
+diff --git a/net/minecraft/world/level/storage/LevelStorageSource.java b/net/minecraft/world/level/storage/LevelStorageSource.java
+index e5621f80224156ec316dc0f8725e8823f52bdc07..f8bf84f360e85cd9e9ea18801b5cfe9ac4c05fb7 100644
+--- a/net/minecraft/world/level/storage/LevelStorageSource.java
++++ b/net/minecraft/world/level/storage/LevelStorageSource.java
+@@ -177,8 +177,8 @@ public class LevelStorageSource {
+ 
+         CompoundTag fileContents;
+         try {
+-            fileContents = io.nzsmp.folia.storage.PluginPersistence.handles(dataLocation)
+-                ? io.nzsmp.folia.storage.PluginPersistence.readNbt(dataLocation) : NbtIo.readCompressed(dataLocation, NbtAccounter.unlimitedHeap());
++            fileContents = sh.btx.nzsmp.folia.storage.PluginPersistence.handles(dataLocation)
++                ? sh.btx.nzsmp.folia.storage.PluginPersistence.readNbt(dataLocation) : NbtIo.readCompressed(dataLocation, NbtAccounter.unlimitedHeap());
+         } catch (IOException e) {
+             return DataResult.error(e::getMessage);
+         }
+@@ -202,8 +202,8 @@ public class LevelStorageSource {
+         fullTag.put("data", encoded);
+         NbtUtils.addCurrentDataVersion(fullTag);
+         Path path = type.id().withSuffix(".dat").resolveAgainst(worldFolder.resolve("data"));
+-        if (io.nzsmp.folia.storage.PluginPersistence.handles(path)) {
+-            io.nzsmp.folia.storage.PluginPersistence.writeNbt(path, fullTag);
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.handles(path)) {
++            sh.btx.nzsmp.folia.storage.PluginPersistence.writeNbt(path, fullTag);
+             return;
+         }
+         FileUtil.createDirectoriesSafe(path.getParent());
+@@ -575,8 +575,8 @@ public class LevelStorageSource {
+         public Dynamic<?> getUnfixedDataTag(final boolean useFallback) throws IOException {
+             this.checkLock();
+             Path dataFile = this.getDataFile(useFallback);
+-            CompoundTag root = io.nzsmp.folia.storage.PluginPersistence.handles(dataFile)
+-                ? io.nzsmp.folia.storage.PluginPersistence.readNbt(dataFile) : LevelStorageSource.readLevelDataTagRaw(dataFile);
++            CompoundTag root = sh.btx.nzsmp.folia.storage.PluginPersistence.handles(dataFile)
++                ? sh.btx.nzsmp.folia.storage.PluginPersistence.readNbt(dataFile) : LevelStorageSource.readLevelDataTagRaw(dataFile);
+             return new Dynamic<>(NbtOps.INSTANCE, root.getCompoundOrEmpty("Data"));
+         }
+ 
+@@ -603,8 +603,8 @@ public class LevelStorageSource {
+         }
+ 
+         private void saveLevelData(final CompoundTag root) {
+-            if (io.nzsmp.folia.storage.PluginPersistence.worldEnabled()) {
+-                io.nzsmp.folia.storage.PluginPersistence.writeNbt(this.levelDirectory.dataFile(), root);
++            if (sh.btx.nzsmp.folia.storage.PluginPersistence.worldEnabled()) {
++                sh.btx.nzsmp.folia.storage.PluginPersistence.writeNbt(this.levelDirectory.dataFile(), root);
+                 return;
+             }
+             Path worldDir = this.levelDirectory.path();
+@@ -729,7 +729,7 @@ public class LevelStorageSource {
+         }
+ 
+         public boolean hasWorldData() {
+-            return io.nzsmp.folia.storage.PluginPersistence.exists(this.levelDirectory.dataFile()) || io.nzsmp.folia.storage.PluginPersistence.exists(this.levelDirectory.oldDataFile());
++            return sh.btx.nzsmp.folia.storage.PluginPersistence.exists(this.levelDirectory.dataFile()) || sh.btx.nzsmp.folia.storage.PluginPersistence.exists(this.levelDirectory.oldDataFile());
+         }
+ 
+         @Override
+diff --git a/net/minecraft/world/level/storage/PlayerDataStorage.java b/net/minecraft/world/level/storage/PlayerDataStorage.java
+index 0bf96605ee316814114417a3fdb0684f76db7e66..6a5906d777357629d7f154b25fc7b909caefd1d4 100644
+--- a/net/minecraft/world/level/storage/PlayerDataStorage.java
++++ b/net/minecraft/world/level/storage/PlayerDataStorage.java
+@@ -35,8 +35,8 @@ public class PlayerDataStorage {
+         try (ProblemReporter.ScopedCollector reporter = new ProblemReporter.ScopedCollector(player.problemPath(), LOGGER)) {
+             TagValueOutput output = TagValueOutput.createWithContext(reporter, player.registryAccess());
+             player.saveWithoutId(output);
+-            if (io.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
+-                io.nzsmp.folia.storage.PluginPersistence.writePlayerNbt(player.getUUID(), output.buildResult());
++            if (sh.btx.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
++                sh.btx.nzsmp.folia.storage.PluginPersistence.writePlayerNbt(player.getUUID(), output.buildResult());
+                 return;
+             }
+             Path playerDirPath = this.playerDir.toPath();
+@@ -95,8 +95,8 @@ public class PlayerDataStorage {
+     }
+ 
+     public Optional<CompoundTag> load(final NameAndId nameAndId) {
+-        if (io.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
+-            return io.nzsmp.folia.storage.PluginPersistence.readPlayerNbt(nameAndId.id()).map(tag -> {
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.playerEnabled()) {
++            return sh.btx.nzsmp.folia.storage.PluginPersistence.readPlayerNbt(nameAndId.id()).map(tag -> {
+                 int version = NbtUtils.getDataVersion(tag);
+                 return ca.spottedleaf.dataconverter.minecraft.MCDataConverter.convertTag(ca.spottedleaf.dataconverter.minecraft.datatypes.MCTypeRegistry.PLAYER, DataFixTypes.PLAYER, tag, version, ca.spottedleaf.dataconverter.minecraft.util.Version.getCurrentVersion());
+             });
+diff --git a/net/minecraft/world/level/storage/SavedDataStorage.java b/net/minecraft/world/level/storage/SavedDataStorage.java
+index bac871d8bd7a555897d74fd979dbca1630f22eac..604b4a0f7a3284e5c02c1973aa0b5c8da10e25d3 100644
+--- a/net/minecraft/world/level/storage/SavedDataStorage.java
++++ b/net/minecraft/world/level/storage/SavedDataStorage.java
+@@ -124,7 +124,7 @@ public class SavedDataStorage implements AutoCloseable {
+     private <T extends SavedData> @Nullable T readSavedData(final SavedDataType<T> type) {
+         try {
+             Path file = this.getDataFile(type.id());
+-            if (io.nzsmp.folia.storage.PluginPersistence.exists(file)) {
++            if (sh.btx.nzsmp.folia.storage.PluginPersistence.exists(file)) {
+                 CompoundTag tag = this.readTagFromDisk(file, type.dataFixType(), SharedConstants.getCurrentVersion().dataVersion().version());
+                 RegistryOps<Tag> ops = this.registries.createSerializationContext(NbtOps.INSTANCE);
+                 return type.codec()
+@@ -133,7 +133,7 @@ public class SavedDataStorage implements AutoCloseable {
+                     .orElse(null);
+             }
+         } catch (Exception e) {
+-            if (io.nzsmp.folia.storage.PluginPersistence.handles(this.getDataFile(type.id()))) throw io.nzsmp.folia.storage.PluginPersistence.fail(e);
++            if (sh.btx.nzsmp.folia.storage.PluginPersistence.handles(this.getDataFile(type.id()))) throw sh.btx.nzsmp.folia.storage.PluginPersistence.fail(e);
+             LOGGER.error("Error loading saved data: {}", type, e);
+         }
+ 
+@@ -147,8 +147,8 @@ public class SavedDataStorage implements AutoCloseable {
+     }
+ 
+     public CompoundTag readTagFromDisk(final Path dataFile, final DataFixTypes type, final int newVersion) throws IOException {
+-        if (io.nzsmp.folia.storage.PluginPersistence.handles(dataFile)) {
+-            final CompoundTag tag = io.nzsmp.folia.storage.PluginPersistence.readNbt(dataFile);
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.handles(dataFile)) {
++            final CompoundTag tag = sh.btx.nzsmp.folia.storage.PluginPersistence.readNbt(dataFile);
+             return type.update(this.fixerUpper, tag, NbtUtils.getDataVersion(tag, 1343), newVersion);
+         }
+         try (
+@@ -287,8 +287,8 @@ public class SavedDataStorage implements AutoCloseable {
+ 
+     private void tryWrite(final SavedDataType<?> type, final CompoundTag tag) {
+         Path path = this.getDataFile(type.id());
+-        if (io.nzsmp.folia.storage.PluginPersistence.handles(path)) {
+-            io.nzsmp.folia.storage.PluginPersistence.writeNbt(path, tag);
++        if (sh.btx.nzsmp.folia.storage.PluginPersistence.handles(path)) {
++            sh.btx.nzsmp.folia.storage.PluginPersistence.writeNbt(path, tag);
+             return;
+         }
+ 

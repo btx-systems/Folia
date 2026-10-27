@@ -1,6 +1,6 @@
 # Plugin generation and persistence extensions
 
-This fork adds transport-independent extension points under `io.nzsmp.folia`.
+This fork adds transport-independent extension points under `sh.btx.nzsmp.folia`.
 The APIs do not require a network service, database, or a particular compression
 or delta-storage algorithm. Providers are responsible for their implementation.
 
@@ -261,7 +261,7 @@ Run unit/integration fixtures and the import benchmark:
 
 ```sh
 ./gradlew :folia-api:test :folia-api:checkstyleMain :folia-api:checkstyleTest
-./gradlew :folia-server:test --tests io.nzsmp.folia.ExtensionTestSuite
+./gradlew :folia-server:test --tests sh.btx.nzsmp.folia.ExtensionTestSuite
 ./gradlew :folia-server:benchmarkChunkImports
 ```
 

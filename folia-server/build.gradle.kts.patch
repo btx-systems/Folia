@@ -107,7 +107,7 @@
 +    description = "Compare Bukkit setters, packed palettes and encoded section import"
 +    dependsOn(tasks.testClasses)
 +    classpath = sourceSets.test.get().runtimeClasspath
-+    mainClass.set("io.nzsmp.folia.GenerationFastPathBenchmark")
++    mainClass.set("sh.btx.nzsmp.folia.GenerationFastPathBenchmark")
 +    workingDir = layout.buildDirectory.dir("chunk-import-benchmark").get().asFile
 +    javaLauncher.set(project.javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(25)) })
 +    maxHeapSize = "2G"
