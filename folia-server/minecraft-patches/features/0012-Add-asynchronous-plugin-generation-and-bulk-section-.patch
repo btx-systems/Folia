@@ -1,0 +1,57 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: btx-systems <jappleid441@gmail.com>
+Date: Tue, 27 Oct 2026 14:30:25 +1300
+Subject: [PATCH] Add asynchronous plugin generation and bulk section import
+ hooks
+
+
+diff --git a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
+index f1952fbdf9cadef9095b5de8777c466f7bbd77a7..2c5cbee74f8c99cf50e388a34eb3a9857bb1ce59 100644
+--- a/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
++++ b/ca/spottedleaf/moonrise/patches/chunk_system/scheduling/ChunkTaskScheduler.java
+@@ -662,6 +662,11 @@ public final class ChunkTaskScheduler {
+         if (toStatus == ChunkStatus.EMPTY) {
+             return new ChunkLoadTask(this, this.world, chunkX, chunkZ, chunkHolder, initialPriority);
+         }
++        // NZSMP - direct async generation starts only after EMPTY has been loaded.
++        if (toStatus == ChunkStatus.STRUCTURE_STARTS && chunk.getPersistedStatus() == ChunkStatus.EMPTY
++            && this.world.generator instanceof io.nzsmp.folia.generation.AsyncChunkGenerator generator) {
++            return new io.nzsmp.folia.generation.PluginGenerationTask(this, this.world, chunkX, chunkZ, chunk, generator, initialPriority);
++        }
+         if (toStatus == ChunkStatus.LIGHT) {
+             return new ChunkLightTask(this, this.world, chunkX, chunkZ, chunk, initialPriority);
+         }
+diff --git a/net/minecraft/world/level/chunk/PalettedContainer.java b/net/minecraft/world/level/chunk/PalettedContainer.java
+index d564338ddc3dc13f0d11a18e26ea36e1f9343745..87be6e9352f1a4f789c94a03a3cc2ca38ed5a319 100644
+--- a/net/minecraft/world/level/chunk/PalettedContainer.java
++++ b/net/minecraft/world/level/chunk/PalettedContainer.java
+@@ -122,6 +122,13 @@ public class PalettedContainer<T> implements PaletteResize<T>, PalettedContainer
+         // Paper end - Anti-Xray
+     }
+ 
++    // NZSMP start - validated plugin palette adoption, preserving Anti-Xray presets
++    public static <T> PalettedContainer<T> createForExtension(final Strategy<T> strategy, final Configuration config,
++        final BitStorage storage, final Palette<T> palette, final List<T> values, final T defaultValue, final T @Nullable [] presets) {
++        return new PalettedContainer<>(strategy, config, storage, palette, values, defaultValue, presets);
++    }
++    // NZSMP end
++
+     private PalettedContainer(final PalettedContainer<T> source, final T @Nullable [] presetValues) { // Paper - Anti-Xray - Add preset values
+         this.presetValues = presetValues; // Paper - Anti-Xray - Add preset values
+         this.strategy = source.strategy;
+diff --git a/net/minecraft/world/level/chunk/Strategy.java b/net/minecraft/world/level/chunk/Strategy.java
+index 38e4abe3307c020ec7e2385a559ff4708b09c899..0f40cd394d1bb13da3c840e8e94d07326d26e1de 100644
+--- a/net/minecraft/world/level/chunk/Strategy.java
++++ b/net/minecraft/world/level/chunk/Strategy.java
+@@ -62,6 +62,11 @@ public abstract class Strategy<T> {
+         };
+     }
+ 
++    // NZSMP - expose configuration selection to the validated bulk importer
++    public final Configuration extensionConfiguration(final int value, final boolean paletteSize) {
++        return paletteSize ? this.getConfigurationForPaletteSize(value) : this.getConfigurationForBitCount(value);
++    }
++
+     public int entryCount() {
+         return this.entryCount;
+     }
