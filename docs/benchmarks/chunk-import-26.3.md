@@ -4,24 +4,24 @@ The encoded and packed import paths substantially reduce the cost of constructin
 server sections in this fixture. At 254 sections, the median of three JVM-fork
 medians was:
 
-- Mixed terrain: Bukkit setters 22.080 ms, copied palettes 5.067 ms, owned palettes
-  5.016 ms, encoded sections 5.659 ms. The encoded path used 7,548,880 allocated
+- Mixed terrain: Bukkit setters 22.589 ms, copied palettes 5.235 ms, owned palettes
+  5.212 ms, encoded sections 5.667 ms. The encoded path used 7,534,656 allocated
   bytes versus 31,174,048 for setters, about 76% less.
-- Stratified terrain: Bukkit setters 15.586 ms, copied palettes 1.307 ms, owned
-  palettes 1.318 ms, encoded sections 1.478 ms. The encoded path used 2,038,960
+- Stratified terrain: Bukkit setters 16.072 ms, copied palettes 1.355 ms, owned
+  palettes 1.346 ms, encoded sections 1.441 ms. The encoded path used 2,024,736
   allocated bytes versus 26,983,432 for setters, about 92% less.
 
-Encoded sections took about 3.9x less import time for mixed terrain and 10.5x less
+Encoded sections took about 4.0x less import time for mixed terrain and 11.2x less
 for stratified terrain than setters. Packed imports were slightly faster here;
 the small copied-versus-owned timing difference is within observed run variation.
 Ownership transfer saved 524,256 import allocation bytes per mixed 254-section
 chunk. Creating the owned arrays belongs to the provider and is outside timing.
 
-The 24-section mixed fixture measured 2.046 ms for setters, 0.470 ms for copied
-palettes, 0.479 ms for owned palettes, and 0.556 ms for encoded sections. The
-24-section stratified setter baseline varied substantially across forks
-(1.699–5.488 ms); its much larger apparent speedup should not be generalized.
-All measurements and checksums, including that variation, are retained in
+The 24-section mixed fixture measured 2.135 ms for setters, 0.499 ms for copied
+palettes, 0.504 ms for owned palettes, and 0.541 ms for encoded sections. The
+24-section stratified fixture measured 1.585 ms for setters, 0.138 ms for copied
+palettes, 0.137 ms for owned palettes, and 0.152 ms for encoded sections. All
+measurements and checksums from implementation commit `a05aacc` are retained in
 [the raw results](chunk-import-26.3.json).
 
 ## Reproduction
