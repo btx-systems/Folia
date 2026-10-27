@@ -59,6 +59,13 @@ class SectionImporterTest {
         try {
             assertThrows(IllegalArgumentException.class, () -> SectionImporter.encoded(buffer, factory.blockStatesStrategy(), Blocks.AIR.defaultBlockState(), null));
         } finally { buffer.release(); }
+        var oversizedPalette = new net.minecraft.network.FriendlyByteBuf(io.netty.buffer.Unpooled.buffer());
+        try {
+            oversizedPalette.writeByte(5); // Hash palette with room for at most 32 entries
+            oversizedPalette.writeVarInt(33);
+            assertThrows(IllegalArgumentException.class, () -> SectionImporter.encoded(oversizedPalette,
+                factory.blockStatesStrategy(), Blocks.AIR.defaultBlockState(), null));
+        } finally { oversizedPalette.release(); }
         assertThrows(IllegalArgumentException.class, () -> SectionImporter.packed(
             PackedPalette.takeOwnership(List.of(Blocks.STONE.defaultBlockState()), 4, new long[1]),
             factory.blockStatesStrategy(), Blocks.AIR.defaultBlockState(), null, value -> value));

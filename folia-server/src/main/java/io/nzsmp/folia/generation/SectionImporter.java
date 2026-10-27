@@ -57,6 +57,14 @@ public final class SectionImporter {
         if (bits > 31) throw new IllegalArgumentException("Invalid palette bits: " + bits);
         final Configuration config = strategy.extensionConfiguration(bits, false);
         if (config.bitsInMemory() != bits) throw new IllegalArgumentException("Noncanonical network palette width: " + bits);
+        if (bits != 0 && !(config instanceof Configuration.Global)) {
+            final int start = buffer.readerIndex();
+            final int count = buffer.readVarInt();
+            if (count < 1 || count > strategy.entryCount() || count > (1L << bits)) {
+                throw new IllegalArgumentException("Invalid network palette count");
+            }
+            buffer.readerIndex(start);
+        }
         final Palette<T> palette = config.createPalette(strategy, List.of());
         palette.read(buffer, strategy.globalMap());
         if (palette.getSize() < 1 || (bits == 0 && palette.getSize() != 1)) {
