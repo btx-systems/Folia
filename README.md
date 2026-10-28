@@ -14,12 +14,12 @@
 
 The [Patch and Build workflow](https://github.com/btx-systems/Folia/actions/workflows/build.yml)
 runs on pushes and pull requests and can also be started manually. Open a successful run
-and download `folia-paperclip-<run number>` from **Artifacts** (or use the download link
+and download `folia-server-<run number>` from **Artifacts** (or use the download link
 in the run summary). Artifacts are retained for 30 days and require a GitHub sign-in.
-Extract the archive and run the Paperclip jar with Java 25:
+Extract the archive and run `folia.jar` (the runnable Paperclip server) with Java 25:
 
 ```sh
-java -jar folia-paperclip-<version>.jar --nogui
+java -jar folia.jar --nogui
 ```
 
 On the first start, follow the server's EULA instructions before restarting.

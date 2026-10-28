@@ -36,20 +36,25 @@ jobs:
       - name: Build
         run: ./gradlew build :folia-server:createPaperclipJar --stacktrace
 
-      - name: Upload Runnable Paperclip Jar
-        id: paperclip
+      - name: Prepare Runnable Server Jar
+        run: |
+          mkdir -p build/artifacts
+          cp folia-server/build/libs/folia-paperclip-*.jar build/artifacts/folia.jar
+
+      - name: Upload Runnable Server Jar
+        id: server
         uses: actions/upload-artifact@v7
         with:
-          name: folia-paperclip-${{ github.run_number }}
-          path: folia-server/build/libs/folia-paperclip-*.jar
+          name: folia-server-${{ github.run_number }}
+          path: build/artifacts/folia.jar
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
 
-      - name: Link Paperclip Download
+      - name: Link Server Jar Download
         env:
-          ARTIFACT_URL: ${{ steps.paperclip.outputs.artifact-url }}
+          ARTIFACT_URL: ${{ steps.server.outputs.artifact-url }}
         run: |
           echo "### Runnable Folia server" >> "$GITHUB_STEP_SUMMARY"
-          echo "[Download Paperclip jar]($ARTIFACT_URL) (retained for 30 days)." >> "$GITHUB_STEP_SUMMARY"
-          echo 'Extract the archive and run with Java 25: `java -jar folia-paperclip-<version>.jar --nogui`.' >> "$GITHUB_STEP_SUMMARY"
+          echo "[Download Folia server jar]($ARTIFACT_URL) (retained for 30 days)." >> "$GITHUB_STEP_SUMMARY"
+          echo 'Extract the archive and run with Java 25: `java -jar folia.jar --nogui`.' >> "$GITHUB_STEP_SUMMARY"
