@@ -33,7 +33,7 @@ jobs:
           git config --global user.name "GitHub Actions"
           ./gradlew applyAllPatches --stacktrace
 
-      - name: Build
+      - name: Build and Create Paperclip Jar
         run: ./gradlew build :folia-server:createPaperclipJar --stacktrace
 
       - name: Prepare Runnable Server Jar
@@ -41,15 +41,30 @@ jobs:
           mkdir -p build/artifacts
           cp folia-server/build/libs/folia-paperclip-*.jar build/artifacts/folia.jar
 
+      - name: Verify Runnable Paperclip Jar
+        run: |
+          python3 - <<'PY'
+          from zipfile import ZipFile
+
+          with ZipFile("build/artifacts/folia.jar") as jar:
+              corrupt_entry = jar.testzip()
+              if corrupt_entry is not None:
+                  raise SystemExit(f"Corrupt JAR entry: {corrupt_entry}")
+              manifest = jar.read("META-INF/MANIFEST.MF").decode().splitlines()
+              if "Main-Class: io.papermc.paperclip.Main" not in manifest:
+                  raise SystemExit("Expected a runnable Paperclip JAR")
+              jar.getinfo("io/papermc/paperclip/Main.class")
+          print("Verified runnable Paperclip JAR")
+          PY
+
       - name: Upload Runnable Server Jar
         id: server
         uses: actions/upload-artifact@v7
         with:
-          name: folia-server-${{ github.run_number }}
           path: build/artifacts/folia.jar
+          archive: false
           if-no-files-found: error
           retention-days: 30
-          compression-level: 0
 
       - name: Link Server Jar Download
         env:
@@ -57,4 +72,4 @@ jobs:
         run: |
           echo "### Runnable Folia server" >> "$GITHUB_STEP_SUMMARY"
           echo "[Download Folia server jar]($ARTIFACT_URL) (retained for 30 days)." >> "$GITHUB_STEP_SUMMARY"
-          echo 'Extract the archive and run with Java 25: `java -jar folia.jar --nogui`.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Download `folia.jar` directly and run with Java 25: `java -jar folia.jar --nogui`.' >> "$GITHUB_STEP_SUMMARY"
