@@ -28,6 +28,8 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.storage.SerializableChunkData;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.densityfunction.SamplerContext;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.ticks.ScheduledTick;
 import org.bukkit.craftbukkit.CraftHeightMap;
 import org.bukkit.craftbukkit.block.data.CraftBlockData;
 
@@ -123,6 +125,7 @@ public final class ChunkImporter {
             validateBlockEntity(target, tag, blockEntityPositions);
             target.setBlockEntityNbt(tag);
         }
+        scheduleFluidTicks(target, extras.fluidTicks());
         final Set<Heightmap.Types> missing = EnumSet.copyOf(ChunkStatus.SPAWN.heightmapsAfter());
         extras.heightmaps().forEach((type, values) -> {
             if (values.size() != 256 || values.stream().anyMatch(value -> value < 0 || value > world.getHeight())) throw new IllegalArgumentException("Invalid heightmap");
@@ -135,6 +138,24 @@ public final class ChunkImporter {
         target.setLightCorrect(false);
         target.markUnsaved();
         return target;
+    }
+
+    /**
+     * Schedule a fluid tick at each position that holds fluid; others are ignored. Proto
+     * chunk ticks carry over to the loaded chunk and run once it and its neighbours tick.
+     */
+    public static void scheduleFluidTicks(final ChunkAccess chunk, final List<ChunkExtras.FluidTick> ticks) {
+        final Set<BlockPos> seen = new HashSet<>();
+        for (final ChunkExtras.FluidTick tick : ticks) {
+            final BlockPos pos = new BlockPos(chunk.getPos().getMinBlockX() + tick.x(), tick.y(), chunk.getPos().getMinBlockZ() + tick.z());
+            if (chunk.isOutsideBuildHeight(pos) || !seen.add(pos)) {
+                throw new IllegalArgumentException("Duplicate or out-of-bounds fluid tick");
+            }
+            final FluidState fluid = chunk.getFluidState(pos);
+            if (!fluid.isEmpty()) {
+                chunk.getFluidTicks().schedule(new ScheduledTick<>(fluid.getType(), pos, 0L, 0L));
+            }
+        }
     }
 
     public static void validateBlockEntity(final ChunkAccess chunk, final CompoundTag tag, final Set<BlockPos> seen) {

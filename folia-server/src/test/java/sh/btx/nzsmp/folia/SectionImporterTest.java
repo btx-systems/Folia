@@ -85,6 +85,27 @@ class SectionImporterTest {
     }
 
     @Test
+    void fluidTicksAreScheduledOnlyWhereFluidIsPresent() {
+        var factory = PalettedContainerFactory.create(RegistryHelper.registryAccess());
+        var chunk = new net.minecraft.world.level.chunk.ProtoChunk(new net.minecraft.world.level.ChunkPos(-2, 3), net.minecraft.world.level.chunk.UpgradeData.EMPTY,
+            net.minecraft.world.level.LevelHeightAccessor.create(-64, 384), factory, null);
+        chunk.getSections()[0].setBlockState(1, 2, 3, Blocks.WATER.defaultBlockState());
+        var water = new net.minecraft.core.BlockPos(-31, -62, 51);
+        var air = new net.minecraft.core.BlockPos(-30, -62, 51);
+        sh.btx.nzsmp.folia.generation.ChunkImporter.scheduleFluidTicks(chunk, List.of(
+            new sh.btx.nzsmp.folia.generation.ChunkExtras.FluidTick(1, -62, 3),
+            new sh.btx.nzsmp.folia.generation.ChunkExtras.FluidTick(2, -62, 3)));
+        assertTrue(chunk.getFluidTicks().hasScheduledTick(water, net.minecraft.world.level.material.Fluids.WATER));
+        assertFalse(chunk.getFluidTicks().hasScheduledTick(air, net.minecraft.world.level.material.Fluids.WATER));
+        assertEquals(1, chunk.getFluidTicks().count());
+        var duplicate = new sh.btx.nzsmp.folia.generation.ChunkExtras.FluidTick(1, -62, 3);
+        assertThrows(IllegalArgumentException.class, () -> sh.btx.nzsmp.folia.generation.ChunkImporter.scheduleFluidTicks(chunk, List.of(duplicate, duplicate)));
+        assertThrows(IllegalArgumentException.class, () -> sh.btx.nzsmp.folia.generation.ChunkImporter.scheduleFluidTicks(chunk,
+            List.of(new sh.btx.nzsmp.folia.generation.ChunkExtras.FluidTick(0, 320, 0))));
+        assertThrows(IllegalArgumentException.class, () -> new sh.btx.nzsmp.folia.generation.ChunkExtras.FluidTick(16, 0, 0));
+    }
+
+    @Test
     void importedBlockEntitiesRequireMatchingPositionsAndTypes() {
         var factory = PalettedContainerFactory.create(RegistryHelper.registryAccess());
         var chunk = new net.minecraft.world.level.chunk.ProtoChunk(new net.minecraft.world.level.ChunkPos(-2, 3), net.minecraft.world.level.chunk.UpgradeData.EMPTY,
